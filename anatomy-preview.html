@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anatomy preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:#242832; font-family:"Segoe UI","PingFang SC",sans-serif; }
+  header { padding:24px 32px; border-bottom:1px solid #e8e9ee; display:flex; justify-content:space-between; align-items:center; }
+  header strong { font-size:20px; letter-spacing:.06em; }
+  .layout { display:grid; grid-template-columns:420px minmax(0,1fr); min-height:calc(100vh - 82px); }
+  .intro { padding:80px 44px; }
+  .intro p { font:600 10px/1.2 monospace; letter-spacing:.16em; color:#787e8c; text-transform:uppercase; }
+  .intro h1 { font-size:50px; line-height:1.1; letter-spacing:-.04em; margin:28px 0 20px; }
+  .intro h1 span { color:#f15a32; display:block; font-family:serif; }
+  .intro .desc { font-size:15px; line-height:1.8; color:#5e6470; }
+  .stage { background:#f4f5f7; border-radius:28px; margin:24px 28px 24px 0; padding:28px; position:relative; overflow:hidden; }
+  .stage-head { display:flex; justify-content:space-between; font:500 9px/1.2 monospace; letter-spacing:.12em; text-transform:uppercase; color:#737987; }
+  .pair { display:flex; gap:20px; height:calc(100% - 20px); align-items:center; justify-content:center; }
+  .figure { width:min(46%,460px); height:96%; display:flex; flex-direction:column; }
+  .figure svg { width:100%; height:100%; flex:1; overflow:visible; }
+  .body-outline { fill:#fbfbfc; stroke:#555b68; stroke-width:1.15; }
+  .muscle { fill:#f1f2f4; stroke:#9da2ad; stroke-width:.75; cursor:pointer; transition:fill .18s, stroke .18s; }
+  .muscle.passive { fill:#f7f7f9; stroke:#d1d4da; cursor:default; pointer-events:none; }
+  .muscle:hover { fill:#ffd9cd; stroke:#f15a32; }
+  .muscle.selected { fill:#f58766; stroke:#d94a24; }
+  .caption { text-align:center; font:600 9px/1.2 monospace; letter-spacing:.18em; color:#777d89; text-transform:uppercase; padding-top:4px; }
+  .group-note { position:absolute; left:32px; bottom:26px; border:1px solid #dbdde3; background:#fff; border-radius:12px; padding:10px 14px; font-size:11px; color:#565c68; }
+</style>
+</head>
+<body>
+<header><strong>肌理 MUSCLE ATLAS</strong><span style="font:500 10px monospace;color:#878d99">ANATOMY PREVIEW</span></header>
+<div class="layout">
+  <section class="intro">
+    <p>Interactive muscle map / 01</p>
+    <h1>点准肌群，<span>练对动作。</span></h1>
+    <p class="desc">点击人体肌群，查看针对性的训练动作。浅色解剖图对照原型，保留正面与背面双视图。</p>
+    <div style="margin-top:32px;padding-top:18px;border-top:1px solid #e8e9ee;display:flex;gap:24px;font:600 10px/1.4 monospace;color:#7f8490"><span>10 MUSCLES</span><span>60 MOVES</span><span>0 LOGIN</span></div>
+  </section>
+  <section class="stage">
+    <div class="stage-head"><span>● INTERACTIVE ANATOMY</span><span>MALE · DUAL VIEW</span></div>
+    <div class="pair">
+      <div class="figure"><svg id="front" viewBox="0 0 1024 1536" aria-label="男性正面肌肉图"></svg><div class="caption">FRONT / 正面</div></div>
+      <div class="figure"><svg id="back" viewBox="0 0 1024 1536" aria-label="男性背面肌肉图"></svg><div class="caption">BACK / 背面</div></div>
+    </div>
+    <div class="group-note" id="note">悬停肌群高亮 · 点击选中</div>
+  </section>
+</div>
+<script>
+(async () => {
+const clickable = {
+  CHEST: '胸大肌', SHOULDERS_FRONT:'三角肌', SHOULDERS_SIDE:'三角肌', BICEPS:'肱二头肌',
+  TRICEPS:'肱三头肌', LATS:'背阔肌', CORE:'腹部核心', OBLIQUES:'腹部核心',
+  GLUTES:'臀部', QUADS:'股四头肌', HAMSTRINGS:'腘绳肌', CALVES:'腓肠肌', SHOULDERS_REAR:'三角肌'
+};
+const colors = {};
+async function draw(id) {
+  const data = await (await fetch(`tools/${id}-preview.json`)).json();
+  const svg = document.getElementById(id);
+  let html = '';
+  for (const o of data.outline) html += `<path class="body-outline" d="${o.d}"/>`;
+  for (const m of data.muscles) {
+    const can = clickable[m.group];
+    const name = can || m.group;
+    html += `<path class="muscle ${can ? '' : 'passive'}" data-group="${m.group}" data-name="${name}" d="${m.d}"/>`;
+  }
+  svg.innerHTML = html;
+}
+await Promise.all([draw('front'), draw('back')]);
+document.querySelectorAll('.muscle:not(.passive)').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    const name = el.dataset.name;
+    const group = el.dataset.group;
+    const like = document.querySelectorAll(`.muscle[data-name="${name}"]`);
+    like.forEach(x => x.classList.add('hovering'));
+    document.getElementById('note').textContent = name + ' · CLICK TO VIEW MOVES';
+  });
+  el.addEventListener('mouseleave', () => {
+    document.querySelectorAll('.muscle.hovering').forEach(x => x.classList.remove('hovering'));
+    document.getElementById('note').textContent = '悬停肌群高亮 · 点击选中';
+  });
+  el.addEventListener('click', () => {
+    const name = el.dataset.name;
+    document.querySelectorAll('.muscle.selected').forEach(x => x.classList.remove('selected'));
+    document.querySelectorAll(`.muscle[data-name="${name}"]`).forEach(x => x.classList.add('selected'));
+    document.getElementById('note').textContent = '已选中 ' + name;
+  });
+});
+})();
+</script>
+<style>
+.muscle.hovering { fill:#ffd9cd; stroke:#f15a32; }
+</style>
+</body>
+</html>

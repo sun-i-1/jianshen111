@@ -1,0 +1,123 @@
+      /* 肌群 ID -> 训练动作数据集 */
+      const trainingData = {
+        chest: {
+          name: "胸大肌", latin: "PECTORALIS MAJOR", index: "01",
+          desc: "覆盖水平推、上斜推与夹胸模式。从自重入门到自由重量进阶，选择适合你的训练路径。",
+          actions: [
+            { name: "杠铃卧推", target: "胸大肌 · 三角肌前束 · 肱三头肌", equipment: "杠铃", level: "入门", cue: "肩胛后收下沉，脚掌踩稳，杠铃下放至胸线后垂直推起。" },
+            { name: "哑铃上斜卧推", target: "上胸 · 三角肌前束", equipment: "哑铃", level: "入门", cue: "上斜角度约 30°，肘部略低于肩，顶端保持胸肌张力。" },
+            { name: "绳索夹胸", target: "胸大肌 · 胸肌内侧", equipment: "绳索", level: "进阶", cue: "肘部微屈固定，靠胸肌内收手臂，回放时控制拉伸。" },
+            { name: "俯卧撑", target: "胸大肌 · 肱三头肌 · 核心", equipment: "自重", level: "入门", cue: "身体从头到脚保持直线，沉肩收核心，胸口接近地面后推起。" },
+            { name: "双杠臂屈伸", target: "下胸 · 肱三头肌", equipment: "自重", level: "进阶", cue: "身体微前倾，肘部向后打开，下放至肩部舒适深度。" },
+            { name: "哑铃飞鸟", target: "胸大肌 · 三角肌前束", equipment: "哑铃", level: "进阶", cue: "肘部保持轻微弯曲，以胸肌控制画弧，不要过度下放。" }
+          ]
+        },
+        shoulders: {
+          name: "三角肌", latin: "DELTOIDS", index: "02",
+          desc: "围绕前束、中束与后束构建完整的肩部训练。注重控制与活动度，而不是盲目追求重量。",
+          actions: [
+            { name: "哑铃肩上推举", target: "三角肌前束 · 中束", equipment: "哑铃", level: "入门", cue: "核心收紧，手臂在肩胛平面推举，避免腰椎过伸。" },
+            { name: "哑铃侧平举", target: "三角肌中束", equipment: "哑铃", level: "入门", cue: "手肘微屈，用肩膀带动手臂抬起，避免耸肩借力。" },
+            { name: "绳索面拉", target: "三角肌后束 · 上背", equipment: "绳索", level: "进阶", cue: "绳索拉向额头附近，外旋肩部，保持肩胛后收。" },
+            { name: "杠铃直立划船", target: "三角肌中束 · 斜方肌", equipment: "杠铃", level: "进阶", cue: "握距略宽于肩，手肘领先向上，避免拉得过高。" },
+            { name: "阿诺德推举", target: "三角肌前束 · 中束", equipment: "哑铃", level: "进阶", cue: "从掌心朝向自己旋转推起，全程保持控制，不甩重量。" },
+            { name: "俯身反向飞鸟", target: "三角肌后束 · 菱形肌", equipment: "哑铃", level: "进阶", cue: "俯身背部平直，手肘微屈向两侧打开，挤压肩后束。" }
+          ]
+        },
+        biceps: {
+          name: "肱二头肌", latin: "BICEPS", index: "03",
+          desc: "通过不同肘屈角度刺激肱二头肌与肱肌。保持肩胛稳定，让目标肌群真正承担负荷。",
+          actions: [
+            { name: "哑铃交替弯举", target: "肱二头肌 · 肱肌", equipment: "哑铃", level: "入门", cue: "上臂贴住体侧，弯举时避免身体摆动，顶峰稍停。" },
+            { name: "杠铃弯举", target: "肱二头肌", equipment: "杠铃", level: "入门", cue: "手腕保持中立，用肱二头肌带动肘屈，下放控制。" },
+            { name: "锤式弯举", target: "肱肌 · 肱桡肌", equipment: "哑铃", level: "进阶", cue: "中立握法固定肘部，向上弯举，保持手腕稳定。" },
+            { name: "牧师凳弯举", target: "肱二头肌短头", equipment: "器械", level: "进阶", cue: "上臂完整贴合垫面，屈肘举起后缓慢下放，避免肘部锁死。" },
+            { name: "绳索弯举", target: "肱二头肌 · 肱肌", equipment: "绳索", level: "进阶", cue: "身体站直，上臂固定，收缩顶峰时挤压肱二头肌。" },
+            { name: "反握引体向上", target: "肱二头肌 · 背阔肌", equipment: "自重", level: "高阶", cue: "反握略窄于肩，先沉肩再拉动身体，避免摆荡。" }
+          ]
+        },
+        abs: {
+          name: "腹部核心", latin: "CORE", index: "06",
+          desc: "核心的价值不止卷腹。抗伸展、抗旋转与髋屈能力，共同构成稳定的训练底盘。",
+          actions: [
+            { name: "平板支撑", target: "腹横肌 · 腹直肌", equipment: "自重", level: "入门", cue: "收肋骨与骨盆，让头、背、髋、踝保持一条直线。" },
+            { name: "死虫式", target: "深层核心 · 髋屈肌", equipment: "自重", level: "入门", cue: "腰背轻轻贴地，四肢交替伸展，保持核心张力。" },
+            { name: "悬垂举腿", target: "腹直肌下部 · 髂腰肌", equipment: "自重", level: "进阶", cue: "先稳定肩胛，收骨盆带起双腿，避免借摆动发力。" },
+            { name: "卷腹", target: "腹直肌上部", equipment: "自重", level: "入门", cue: "下巴微收，用腹部将胸骨卷向骨盆，腰部不要离地。" },
+            { name: "绳索跪姿卷腹", target: "腹直肌 · 腹横肌", equipment: "绳索", level: "进阶", cue: "臀部固定，腹部收缩带动躯干向下卷曲，避免用手臂拉绳。" },
+            { name: "健腹轮", target: "腹直肌 · 深层核心", equipment: "器械", level: "高阶", cue: "收紧臀部和核心，控制向前滚动，避免腰部下塌。" }
+          ]
+        },
+        quads: {
+          name: "股四头肌", latin: "QUADRICEPS", index: "08",
+          desc: "以膝主导的蹲、伸动作塑造腿部力量。保持足底稳定，让膝盖自然跟随脚尖方向。",
+          actions: [
+            { name: "高脚杯深蹲", target: "股四头肌 · 臀大肌", equipment: "哑铃", level: "入门", cue: "膝尖与脚尖同向，髋部下沉，保持胸背挺直，脚掌踩稳。" },
+            { name: "腿举", target: "股四头肌 · 腘绳肌", equipment: "器械", level: "入门", cue: "臀部贴紧靠垫，膝盖跟随脚尖方向，避免完全锁死膝关节。" },
+            { name: "保加利亚分腿蹲", target: "股四头肌 · 臀大肌", equipment: "哑铃", level: "进阶", cue: "前脚踩稳，身体垂直下沉，膝盖保持在脚掌上方。" },
+            { name: "杠铃深蹲", target: "股四头肌 · 臀大肌", equipment: "杠铃", level: "进阶", cue: "吸气收紧核心，髋膝同步下蹲，脚掌均匀受力后站起。" },
+            { name: "箭步蹲", target: "股四头肌 · 臀大肌", equipment: "哑铃", level: "入门", cue: "向前迈步后垂直下沉，前膝对准脚尖，后膝接近地面。" },
+            { name: "腿部伸展", target: "股四头肌", equipment: "器械", level: "进阶", cue: "调整靠垫贴合小腿，伸膝到接近伸直，顶端短暂停顿。" }
+          ]
+        },
+        lats: {
+          name: "背阔肌", latin: "LATISSIMUS DORSI", index: "05",
+          desc: "从垂直拉与水平拉两个方向刺激背阔肌，建立背部宽度。先学会肩胛控制，再增加负荷。",
+          actions: [
+            { name: "高位下拉", target: "背阔肌 · 大圆肌", equipment: "器械", level: "入门", cue: "先下沉肩胛，再屈肘将横杆拉向锁骨，避免身体后仰借力。" },
+            { name: "坐姿绳索划船", target: "背阔肌 · 菱形肌", equipment: "绳索", level: "入门", cue: "胸口挺起，手肘贴近体侧向后拉，肩胛向后下方收。" },
+            { name: "单臂哑铃划船", target: "背阔肌 · 斜方肌中束", equipment: "哑铃", level: "进阶", cue: "背部保持平直，将手肘拉向髋部，避免旋转躯干。" },
+            { name: "引体向上", target: "背阔肌 · 大圆肌", equipment: "自重", level: "进阶", cue: "从主动悬垂开始，用背阔肌拉起身体，顶端保持控制。" },
+            { name: "杠铃俯身划船", target: "中背 · 背阔肌", equipment: "杠铃", level: "进阶", cue: "髋部折叠保持背部中立，拉向下腹，避免耸肩。" },
+            { name: "直臂下压", target: "背阔肌 · 大圆肌", equipment: "绳索", level: "进阶", cue: "手臂近伸直，以肩为轴向下压，感受背阔肌收紧。" }
+          ]
+        },
+        triceps: {
+          name: "肱三头肌", latin: "TRICEPS", index: "04",
+          desc: "肘伸是肱三头肌的核心功能。区分下压、过顶伸展与臂屈伸，完整刺激三个头。",
+          actions: [
+            { name: "绳索下压", target: "肱三头肌外侧头", equipment: "绳索", level: "入门", cue: "上臂夹紧体侧，伸肘压下绳索，底端充分收缩肱三头肌。" },
+            { name: "哑铃颈后臂屈伸", target: "肱三头肌长头", equipment: "哑铃", level: "入门", cue: "手肘朝前固定，向颈后下放哑铃，再由肱三头肌伸直。" },
+            { name: "双杠臂屈伸", target: "肱三头肌 · 下胸", equipment: "自重", level: "进阶", cue: "躯干保持直立，肘部向后弯曲，避免肩部耸起。" },
+            { name: "窄距俯卧撑", target: "肱三头肌 · 胸大肌", equipment: "自重", level: "入门", cue: "双手略窄于肩，手肘贴近身体，核心保持稳定。" },
+            { name: "仰卧臂屈伸", target: "肱三头肌长头", equipment: "杠铃", level: "进阶", cue: "上臂保持垂直，屈肘将杠铃下放至额头上方，再伸肘。" },
+            { name: "单臂绳索下压", target: "肱三头肌外侧头", equipment: "绳索", level: "进阶", cue: "固定上臂，单侧伸肘下压，避免肩膀前移。" }
+          ]
+        },
+        glutes: {
+          name: "臀部", latin: "GLUTES", index: "07",
+          desc: "臀大肌负责髋伸与髋外旋。优先建立髋伸感觉，再通过负荷与单腿动作持续进阶。",
+          actions: [
+            { name: "臀桥", target: "臀大肌 · 腘绳肌", equipment: "自重", level: "入门", cue: "脚跟发力抬髋，顶端收紧臀部，避免用腰部顶起。" },
+            { name: "杠铃臀推", target: "臀大肌", equipment: "杠铃", level: "进阶", cue: "肩胛抵住训练凳，髋部向上推至躯干与大腿成直线。" },
+            { name: "绳索后踢腿", target: "臀大肌 · 臀中肌", equipment: "绳索", level: "入门", cue: "核心稳定，腿向后上方伸展，顶峰挤压臀大肌。" },
+            { name: "保加利亚分腿蹲", target: "臀大肌 · 股四头肌", equipment: "哑铃", level: "进阶", cue: "重心放在前脚，下沉时保持髋部朝前，前脚发力站起。" },
+            { name: "罗马尼亚硬拉", target: "臀大肌 · 腘绳肌", equipment: "杠铃", level: "进阶", cue: "髋部向后推，膝盖微屈，杠铃贴腿下放，感受腘绳肌拉伸。" },
+            { name: "侧向弹力带走", target: "臀中肌 · 臀小肌", equipment: "弹力带", level: "入门", cue: "半蹲保持张力，侧向迈小步移动，避免膝内扣。" }
+          ]
+        },
+        hamstrings: {
+          name: "腘绳肌", latin: "HAMSTRINGS", index: "09",
+          desc: "兼有膝屈与髋伸功能。将硬拉模式与腿弯举结合，才能更完整地训练后侧链。",
+          actions: [
+            { name: "罗马尼亚硬拉", target: "腘绳肌 · 臀大肌", equipment: "杠铃", level: "入门", cue: "保持脊柱中立，髋部后移，杠铃贴腿下落，再用臀腿伸髋。" },
+            { name: "坐姿腿弯举", target: "腘绳肌 · 腓肠肌", equipment: "器械", level: "入门", cue: "调整靠垫稳定大腿，脚跟发力弯曲小腿，下放时控制。" },
+            { name: "单腿罗马尼亚硬拉", target: "腘绳肌 · 臀大肌", equipment: "哑铃", level: "进阶", cue: "支撑腿微屈，髋部折叠，保持骨盆水平，不要弓背。" },
+            { name: "俯卧腿弯举", target: "腘绳肌", equipment: "器械", level: "入门", cue: "髋部贴紧垫面，用腘绳肌屈膝，避免腰部抬起。" },
+            { name: "北欧腿弯举", target: "腘绳肌 · 小腿后侧", equipment: "自重", level: "高阶", cue: "身体从头到膝成直线，缓慢前倾，靠腿后侧控制离心。" },
+            { name: "早安式体前屈", target: "腘绳肌 · 竖脊肌", equipment: "杠铃", level: "进阶", cue: "杠铃置于上背，髋部向后折叠，保持背部平直后起身。" }
+          ]
+        },
+        gastrocnemius: {
+          name: "腓肠肌", latin: "GASTROCNEMIUS", index: "10",
+          desc: "以站姿提踵为主刺激腓肠肌，配合坐姿动作覆盖比目鱼肌。加入停顿与节奏变化，突破平台期。",
+          actions: [
+            { name: "站姿提踵", target: "腓肠肌 · 比目鱼肌", equipment: "自重", level: "入门", cue: "前脚掌踩实，脚跟充分抬高并停顿，缓慢下放拉伸小腿。" },
+            { name: "坐姿提踵", target: "比目鱼肌", equipment: "器械", level: "入门", cue: "膝盖固定，提踵至最高点收缩，再缓慢回落。" },
+            { name: "单腿哑铃提踵", target: "腓肠肌 · 比目鱼肌", equipment: "哑铃", level: "进阶", cue: "单脚前掌发力，保持身体平衡，顶峰缩短停留。" },
+            { name: "器械站姿提踵", target: "腓肠肌 · 比目鱼肌", equipment: "器械", level: "入门", cue: "膝盖保持微屈，脚踝完整行程，避免弹震借力。" },
+            { name: "跳绳", target: "小腿肌群 · 心肺", equipment: "器材", level: "入门", cue: "前脚掌轻落地，用手腕摇绳，保持核心稳定和节奏。" },
+            { name: "跳箱", target: "腓肠肌 · 股四头肌", equipment: "自重", level: "进阶", cue: "屈髋屈膝准备，摆臂跳上箱面，轻缓落地后站稳再下箱。" }
+          ]
+        }
+      };

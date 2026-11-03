@@ -1,0 +1,117 @@
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="肌肉训练图谱">
+  <meta name="application-name" content="肌肉训练图谱">
+  <link id="appManifest" rel="manifest">
+  <script>
+    (() => {
+      const isHttp = location.protocol === "http:" || location.protocol === "https:";
+      const pageUrl = location.href.split("#")[0];
+      const scopeUrl = isHttp ? new URL("./", pageUrl).href : pageUrl.replace(/[^/]*$/, "");
+
+      function createIcon(size) {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, size, size);
+
+        const inset = size * 0.1;
+        const radius = size * 0.2;
+        ctx.fillStyle = "#1b1d22";
+        ctx.beginPath();
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(inset, inset, size - inset * 2, size - inset * 2, radius);
+        } else {
+          ctx.moveTo(inset + radius, inset);
+          ctx.lineTo(size - inset - radius, inset);
+          ctx.quadraticCurveTo(size - inset, inset, size - inset, inset + radius);
+          ctx.lineTo(size - inset, size - inset - radius);
+          ctx.quadraticCurveTo(size - inset, size - inset, size - inset - radius, size - inset);
+          ctx.lineTo(inset + radius, size - inset);
+          ctx.quadraticCurveTo(inset, size - inset, inset, size - inset - radius);
+          ctx.lineTo(inset, inset + radius);
+          ctx.quadraticCurveTo(inset, inset, inset + radius, inset);
+        }
+        ctx.fill();
+
+        ctx.strokeStyle = "#f15a32";
+        ctx.lineWidth = size * 0.085;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(size * 0.28, size * 0.74);
+        ctx.lineTo(size * 0.41, size * 0.27);
+        ctx.lineTo(size * 0.5, size * 0.53);
+        ctx.lineTo(size * 0.59, size * 0.27);
+        ctx.lineTo(size * 0.72, size * 0.74);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#5b5f69";
+        ctx.lineWidth = Math.max(2, size * 0.012);
+        ctx.beginPath();
+        ctx.moveTo(size * 0.33, size * 0.82);
+        ctx.lineTo(size * 0.67, size * 0.82);
+        ctx.stroke();
+
+        return canvas.toDataURL("image/png");
+      }
+
+      let icons = [];
+      let appleIconUrl = "";
+      try {
+        const icon192 = createIcon(192);
+        const icon512 = createIcon(512);
+        appleIconUrl = createIcon(180);
+        icons = [
+          { src: icon192, sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: icon512, sizes: "512x512", type: "image/png", purpose: "maskable" }
+        ];
+      } catch (error) {
+        icons = [];
+      }
+
+      const manifest = {
+        name: "肌肉训练图谱",
+        short_name: "肌肉图谱",
+        description: "点击人体肌群，查看针对性训练动作与动作要点。轻量、离线可用的健身工具。",
+        lang: "zh-CN",
+        dir: "ltr",
+        id: pageUrl,
+        start_url: pageUrl,
+        scope: scopeUrl,
+        display: "standalone",
+        display_override: ["standalone", "minimal-ui"],
+        background_color: "#ffffff",
+        theme_color: "#ffffff",
+        categories: ["health", "fitness", "sports"],
+        prefer_related_applications: false,
+        icons,
+        shortcuts: [
+          { name: "胸大肌", short_name: "胸部", url: pageUrl + "#muscle/chest", icons: icons.length ? [{ src: icons[0].src, sizes: "192x192" }] : [] },
+          { name: "背部肌群", short_name: "背部", url: pageUrl + "#muscle/lats", icons: icons.length ? [{ src: icons[0].src, sizes: "192x192" }] : [] },
+          { name: "腹部核心", short_name: "核心", url: pageUrl + "#muscle/abs", icons: icons.length ? [{ src: icons[0].src, sizes: "192x192" }] : [] }
+        ]
+      };
+
+      const manifestLink = document.getElementById("appManifest");
+      if (manifestLink) {
+        try {
+          manifestLink.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }));
+        } catch (error) {
+          manifestLink.href = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifest));
+        }
+      }
+
+      if (appleIconUrl) {
+        const appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        appleIcon.sizes = "180x180";
+        appleIcon.href = appleIconUrl;
+        document.head.appendChild(appleIcon);
+      }
+    })();
+  </script>

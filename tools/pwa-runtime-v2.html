@@ -1,0 +1,160 @@
+  <script>
+    (() => {
+      const installButtons = Array.from(document.querySelectorAll("[data-install]"));
+      const installDialog = document.getElementById("installDialog");
+      const installTitle = document.getElementById("installTitle");
+      const installLead = document.getElementById("installLead");
+      const installSteps = document.getElementById("installSteps");
+      const installNote = document.getElementById("installNote");
+      const installPlatform = document.getElementById("installPlatform");
+      const live = document.getElementById("liveStatus");
+      const standaloneQuery = window.matchMedia("(display-mode: standalone)");
+      const ua = navigator.userAgent;
+      const isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/i.test(ua);
+      const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome|Chromium|Android/i.test(ua);
+
+      let deferredPrompt = null;
+      let installed = false;
+
+      function isStandalone() {
+        return standaloneQuery.matches || window.navigator.standalone === true;
+      }
+
+      function syncInstallButtons() {
+        const hide = installed || isStandalone();
+        installButtons.forEach((button) => {
+          button.hidden = hide;
+        });
+      }
+
+      function renderInstallGuide() {
+        if (!installDialog) return;
+
+        let platform = "BROWSER";
+        let title = "安装到桌面";
+        let lead = "将「肌肉训练图谱」添加到设备，获得独立图标、全屏启动和离线访问。";
+        let note = "安装环境需要 localhost 或 HTTPS。";
+        let steps = [
+          "在地址栏右侧查找安装图标，或打开浏览器菜单。",
+          "选择「安装 肌肉训练图谱」或「安装应用」。",
+          "确认安装，即可从桌面启动。"
+        ];
+
+        if (location.protocol === "file:") {
+          platform = "LOCAL FILE";
+          title = "安装需要 HTTP 访问";
+          lead = "当前页面通过本地文件直接打开，浏览器不会开放 PWA 安装与 Service Worker。";
+          note = "直接双击 HTML 仍可使用全部功能；安装版将拥有独立图标、全屏启动与离线缓存。";
+          steps = [
+            "将文件放到任意 HTTPS 静态托管，或用本地服务器打开。",
+            "通过 http://localhost 或 HTTPS 地址重新访问页面。",
+            "点击「安装应用」，或在浏览器菜单中选择安装。"
+          ];
+        } else if (isIos) {
+          platform = isSafari ? "iOS / SAFARI" : "iOS";
+          title = "添加到主屏幕";
+          lead = isSafari
+            ? "Safari 不会弹出自动安装窗口，请通过分享菜单完成安装。"
+            : "请先在 Safari 中打开本页，再按以下步骤安装。";
+          note = "安装后将从主屏幕全屏启动，并可离线查看动作库。";
+          steps = [
+            isSafari ? "点击 Safari 底部或顶部的「分享」按钮。" : "在 Safari 中打开本页，并点击「分享」。",
+            "在分享菜单中向下找到「添加到主屏幕」。",
+            "点击右上角「添加」，即可完成安装。"
+          ];
+        } else if (isAndroid) {
+          platform = "ANDROID";
+          title = "安装到手机桌面";
+          lead = "若浏览器未自动弹出安装提示，请通过浏览器菜单完成安装。";
+          note = "建议使用 Chrome 或 Edge，以获得完整的 PWA 安装与离线体验。";
+          steps = [
+            "点击浏览器右上角的「⋮」或菜单按钮。",
+            "选择「安装应用」或「添加到主屏幕」。",
+            "确认安装，即可从桌面全屏启动。"
+          ];
+        }
+
+        installPlatform.textContent = platform;
+        installTitle.textContent = title;
+        installLead.textContent = lead;
+        installNote.textContent = note;
+        installSteps.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
+      }
+
+      function openInstallGuide() {
+        renderInstallGuide();
+        if (installDialog && !installDialog.open) {
+          installDialog.showModal();
+        }
+      }
+
+      async function handleInstallRequest() {
+        if (deferredPrompt) {
+          const promptEvent = deferredPrompt;
+          deferredPrompt = null;
+          try {
+            promptEvent.prompt();
+            await promptEvent.userChoice;
+          } catch (error) {
+            openInstallGuide();
+          }
+          syncInstallButtons();
+          return;
+        }
+
+        openInstallGuide();
+      }
+
+      installButtons.forEach((button) => {
+        button.addEventListener("click", handleInstallRequest);
+      });
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        syncInstallButtons();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        installed = true;
+        deferredPrompt = null;
+        syncInstallButtons();
+        if (installDialog?.open) installDialog.close();
+        if (live) live.textContent = "应用已安装";
+      });
+
+      if (typeof standaloneQuery.addEventListener === "function") {
+        standaloneQuery.addEventListener("change", syncInstallButtons);
+      }
+
+      document.getElementById("installClose")?.addEventListener("click", () => installDialog?.close());
+      document.getElementById("installDone")?.addEventListener("click", () => installDialog?.close());
+      installDialog?.addEventListener("click", (event) => {
+        if (event.target === installDialog) installDialog.close();
+      });
+
+      syncInstallButtons();
+
+      if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+        window.addEventListener("load", async () => {
+          try {
+            await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+            navigator.serviceWorker.ready.then(() => {
+              document.documentElement.dataset.offlineReady = "true";
+            });
+          } catch (error) {
+            console.info("[PWA] Service Worker registration skipped:", error.message);
+          }
+        });
+      }
+
+      ["gesturestart", "gesturechange"].forEach((type) => {
+        document.addEventListener(type, (event) => event.preventDefault(), { passive: false });
+      });
+
+      document.addEventListener("touchmove", (event) => {
+        if (event.touches && event.touches.length > 1) event.preventDefault();
+      }, { passive: false });
+    })();
+  </script>

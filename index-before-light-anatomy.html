@@ -1,0 +1,3279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2efe6">
+  <meta name="description" content="肌理 MUSCLE ATLAS：点击人体肌群，查看针对性的训练动作与专业提示。纯工具，无需登录。">
+  <title>肌理 MUSCLE ATLAS — 交互式肌肉训练图谱</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23171a14'/%3E%3Cpath d='M10 28 14 11l6 9 6-9 4 17' fill='none' stroke='%23f15a32' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    /* ============================================================
+       MUSCLE ATLAS / 肌理
+       Design system + static application shell
+       ============================================================ */
+
+    /* ---------- 01. Design tokens ---------- */
+    :root {
+      /* Color */
+      --canvas: #f2efe6;
+      --canvas-deep: #e9e4d8;
+      --surface: #faf8f2;
+      --surface-raised: #fffdf8;
+      --ink: #171a14;
+      --ink-soft: #3b3f34;
+      --muted: #7a7c6f;
+      --muted-strong: #5f6257;
+      --line: rgba(23, 26, 20, 0.12);
+      --line-strong: rgba(23, 26, 20, 0.22);
+      --accent: #f15a32;
+      --accent-deep: #d94a24;
+      --accent-soft: #fbe4da;
+      --lime: #d8f36b;
+      --stage: #181b15;
+      --stage-raised: #23271f;
+      --stage-text: #f3efe4;
+      --stage-muted: rgba(243, 239, 228, 0.52);
+      --stage-line: rgba(243, 239, 228, 0.12);
+      --danger: #bd3c20;
+
+      /* Type */
+      --font-sans: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      --font-serif: "Songti SC", "STSong", "Noto Serif CJK SC", "SimSun", Georgia, serif;
+      --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+
+      /* Shape */
+      --radius-xs: 8px;
+      --radius-sm: 12px;
+      --radius-md: 18px;
+      --radius-lg: 24px;
+      --radius-xl: 30px;
+      --radius-pill: 999px;
+
+      /* Elevation */
+      --shadow-soft: 0 1px 2px rgba(18, 20, 14, 0.04), 0 10px 30px rgba(18, 20, 14, 0.06);
+      --shadow-stage: 0 36px 80px -48px rgba(15, 18, 12, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      --shadow-drawer: 0 36px 100px rgba(13, 15, 11, 0.32), 0 4px 18px rgba(13, 15, 11, 0.12);
+      --shadow-focus: 0 0 0 3px rgba(241, 90, 50, 0.28);
+
+      /* Motion & layout */
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+      --header-height: 76px;
+      --gutter: clamp(16px, 2.6vw, 40px);
+    }
+
+    /* ---------- 02. Reset & base ---------- */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      color-scheme: light;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.28;
+      background-image: radial-gradient(rgba(23, 26, 20, 0.34) 0.45px, transparent 0.45px);
+      background-size: 5px 5px;
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+
+    body.drawer-open {
+      overflow: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    svg {
+      display: block;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 200;
+      padding: 10px 16px;
+      border-radius: var(--radius-pill);
+      background: var(--ink);
+      color: var(--surface);
+      font-size: 13px;
+      transform: translateY(-160%);
+      transition: transform 0.2s var(--ease-out);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    /* ---------- 03. Shared primitives ---------- */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted-strong);
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 22px;
+      height: 1px;
+      background: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    .micro-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--stage-muted);
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(241, 90, 50, 0.12);
+      flex: 0 0 auto;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease-out);
+    }
+
+    .icon-button:hover {
+      background: var(--surface-raised);
+      border-color: var(--line-strong);
+      transform: rotate(-4deg);
+    }
+
+    .icon-button:active {
+      transform: scale(0.94);
+    }
+
+    .icon-button svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    /* ---------- 04. Header / navigation ---------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      height: var(--header-height);
+      padding: 0 var(--gutter);
+      border-bottom: 1px solid var(--line);
+      background: rgba(242, 239, 230, 0.86);
+      -webkit-backdrop-filter: blur(20px) saturate(1.25);
+      backdrop-filter: blur(20px) saturate(1.25);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      flex: 0 0 auto;
+      border-radius: var(--radius-sm);
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 35px;
+      height: 35px;
+      border-radius: 10px;
+      background: var(--ink);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+      overflow: hidden;
+    }
+
+    .brand-mark svg {
+      width: 33px;
+      height: 33px;
+    }
+
+    .brand-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      line-height: 1;
+    }
+
+    .brand-copy strong {
+      font-size: 17px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+    }
+
+    .brand-copy small {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+    }
+
+    .topbar-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 0 clamp(4px, 1vw, 16px);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .topbar-note::after {
+      content: "NO ACCOUNT / NO FEED";
+      color: rgba(122, 124, 111, 0.48);
+      margin-left: 4px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: clamp(10px, 1.6vw, 22px);
+      margin-left: auto;
+      flex: 0 0 auto;
+    }
+
+    .control-unit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .segment {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      background: rgba(255, 253, 248, 0.56);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    .segment button {
+      min-width: 38px;
+      min-height: 30px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: var(--radius-pill);
+      background: transparent;
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.18s ease, background 0.24s var(--ease-out), box-shadow 0.24s ease, transform 0.20s var(--ease-out);
+    }
+
+    .segment button:hover {
+      color: var(--ink);
+    }
+
+    .segment button:active {
+      transform: scale(0.95);
+    }
+
+    .segment button.is-active {
+      color: var(--surface);
+      background: var(--ink);
+      box-shadow: 0 2px 7px rgba(13, 15, 11, 0.25);
+    }
+
+    .segment button:focus-visible {
+      outline-offset: 1px;
+    }
+
+    .model-static {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      background: rgba(255, 253, 248, 0.56);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .model-static .status-dot {
+      width: 4px;
+      height: 4px;
+      box-shadow: none;
+    }
+
+    /* ---------- 05. Page shell / hero ---------- */
+    .page-shell {
+      width: 100%;
+      max-width: 1760px;
+      min-height: calc(100svh - var(--header-height));
+      margin: 0 auto;
+      padding: clamp(14px, 2.2vw, 30px);
+      display: grid;
+      grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+      gap: clamp(18px, 2.4vw, 34px);
+      align-items: stretch;
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: clamp(32px, 5vh, 64px);
+      min-height: 0;
+      padding: clamp(24px, 5vh, 62px) clamp(6px, 1.8vw, 30px) clamp(6px, 1.6vh, 18px) clamp(2px, 1vw, 12px);
+    }
+
+    .hero-main {
+      max-width: 580px;
+    }
+
+    .hero-title {
+      margin: clamp(20px, 3.6vh, 34px) 0 0;
+      font-size: clamp(3.35rem, 5.7vw, 6rem);
+      font-weight: 800;
+      line-height: 0.98;
+      letter-spacing: -0.075em;
+      text-wrap: balance;
+    }
+
+    .hero-title span {
+      display: block;
+      color: var(--accent);
+      font-family: var(--font-serif);
+      font-weight: 500;
+      letter-spacing: -0.09em;
+      transform: translateX(-0.035em);
+    }
+
+    .hero-lede {
+      max-width: 35ch;
+      margin: clamp(20px, 3.2vh, 32px) 0 0;
+      color: var(--ink-soft);
+      font-size: clamp(0.94rem, 1.1vw, 1.04rem);
+      line-height: 1.85;
+      letter-spacing: 0.005em;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: clamp(24px, 4vh, 38px);
+    }
+
+    .primary-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 48px;
+      padding: 5px 6px 5px 20px;
+      border: 0;
+      border-radius: var(--radius-pill);
+      background: var(--ink);
+      color: var(--surface);
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      box-shadow: 0 8px 24px -12px rgba(13, 15, 11, 0.7);
+      transition: background 0.25s ease, transform 0.3s var(--ease-out), box-shadow 0.25s ease;
+    }
+
+    .primary-btn:hover {
+      background: #20241b;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px -14px rgba(13, 15, 11, 0.72);
+    }
+
+    .primary-btn:active {
+      transform: translateY(0);
+    }
+
+    .primary-btn .btn-icon {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      transition: transform 0.35s var(--ease-out), background 0.2s ease;
+    }
+
+    .primary-btn:hover .btn-icon {
+      transform: rotate(45deg);
+      background: var(--accent-deep);
+    }
+
+    .primary-btn .btn-icon svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .hero-aside-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      line-height: 1.4;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .hero-aside-note svg {
+      width: 13px;
+      height: 13px;
+      color: var(--accent);
+    }
+
+    .hero-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding-top: clamp(18px, 2.8vh, 26px);
+      border-top: 1px solid var(--line);
+    }
+
+    .process-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .process-list li {
+      position: relative;
+      min-width: 0;
+      padding-top: 2px;
+    }
+
+    .process-list li + li {
+      padding-left: 14px;
+      border-left: 1px solid var(--line);
+    }
+
+    .process-list span {
+      display: block;
+      margin-bottom: 7px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+    }
+
+    .process-list strong {
+      display: block;
+      font-size: 12px;
+      font-weight: 650;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .stat strong {
+      font-family: var(--font-sans);
+      font-size: 21px;
+      font-weight: 750;
+      letter-spacing: -0.05em;
+      color: var(--ink);
+    }
+
+    .hero-signature {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .hero-signature i {
+      width: 16px;
+      height: 1px;
+      background: var(--line-strong);
+    }
+
+    /* ---------- 06. Anatomy stage ---------- */
+    .body-stage {
+      position: relative;
+      isolation: isolate;
+      min-height: 680px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: var(--stage);
+      color: var(--stage-text);
+      box-shadow: var(--shadow-stage);
+    }
+    .body-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background-image:
+        linear-gradient(rgba(243, 239, 228, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(243, 239, 228, 0.045) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at 50% 48%, black 15%, transparent 78%);
+      pointer-events: none;
+    }
+
+    .body-stage::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      top: 47%;
+      left: 50%;
+      width: min(58vw, 570px);
+      aspect-ratio: 1;
+      border: 1px solid rgba(243, 239, 228, 0.075);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow:
+        0 0 0 1px rgba(243, 239, 228, 0.025),
+        0 0 0 100px rgba(243, 239, 228, 0.022),
+        0 0 0 101px rgba(243, 239, 228, 0.035),
+        0 0 0 210px rgba(243, 239, 228, 0.015),
+        0 0 0 211px rgba(243, 239, 228, 0.025);
+      pointer-events: none;
+    }
+
+    .stage-glow {
+      position: absolute;
+      z-index: -1;
+      top: 8%;
+      left: 50%;
+      width: 70%;
+      height: 70%;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(237, 231, 216, 0.12), rgba(237, 231, 216, 0.025) 48%, transparent 68%);
+      filter: blur(12px);
+      pointer-events: none;
+      transition: transform 0.65s var(--ease-out), opacity 0.45s ease;
+    }
+
+    .body-stage.is-switching .stage-glow {
+      transform: translateX(-50%) scale(1.08);
+      opacity: 0.7;
+    }
+
+    .body-stage.is-switching .stage-code {
+      animation: stage-code-in 0.45s var(--ease-out);
+    }
+
+    @keyframes stage-code-in {
+      from {
+        opacity: 0.2;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .stage-head {
+      position: absolute;
+      top: clamp(18px, 2.5vw, 28px);
+      left: clamp(18px, 2.5vw, 30px);
+      right: clamp(18px, 2.5vw, 30px);
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--stage-muted);
+      white-space: nowrap;
+    }
+
+    .stage-label .status-dot {
+      width: 4px;
+      height: 4px;
+    }
+
+    .stage-code {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: rgba(243, 239, 228, 0.36);
+      white-space: nowrap;
+    }
+
+    .stage-code i {
+      width: 28px;
+      height: 1px;
+      background: rgba(243, 239, 228, 0.16);
+    }
+
+    .focus-card {
+      position: absolute;
+      z-index: 4;
+      top: clamp(58px, 7vw, 84px);
+      left: clamp(18px, 2.5vw, 30px);
+      width: 176px;
+      padding: 14px 15px;
+      border: 1px solid rgba(243, 239, 228, 0.12);
+      border-radius: var(--radius-sm);
+      background: rgba(243, 239, 228, 0.055);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+      transition: border-color 0.25s ease, background 0.25s ease;
+    }
+
+    .focus-card.has-focus {
+      border-color: rgba(241, 90, 50, 0.38);
+      background: rgba(241, 90, 50, 0.075);
+    }
+
+    .focus-card.is-selected {
+      border-color: rgba(241, 90, 50, 0.56);
+      background: rgba(241, 90, 50, 0.105);
+      box-shadow: inset 0 0 0 1px rgba(241, 90, 50, 0.08);
+    }
+
+    .focus-card.is-selected .focus-meta {
+      color: rgba(243, 239, 228, 0.64);
+    }
+
+    .focus-card.is-selected .focus-card-top .status-dot {
+      animation: focus-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes focus-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(241, 90, 50, 0.36); }
+      50% { box-shadow: 0 0 0 4px rgba(241, 90, 50, 0.04); }
+    }
+
+    .focus-card-top {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 9px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--stage-muted);
+    }
+
+    .focus-card-top .status-dot {
+      width: 4px;
+      height: 4px;
+      box-shadow: none;
+      opacity: 0.9;
+    }
+
+    .focus-name {
+      display: block;
+      margin: 0;
+      overflow: hidden;
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .focus-meta {
+      display: block;
+      margin-top: 5px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 500;
+      line-height: 1.55;
+      letter-spacing: 0.02em;
+      color: rgba(243, 239, 228, 0.42);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .figure-zone {
+      position: absolute;
+      inset: clamp(44px, 5vw, 62px) 0 clamp(48px, 5vw, 64px);
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .figure-plinth {
+      position: absolute;
+      left: 50%;
+      bottom: 3.4%;
+      width: clamp(180px, 24vw, 290px);
+      height: 28px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(7, 9, 5, 0.62), transparent 68%);
+      filter: blur(5px);
+      pointer-events: none;
+    }
+
+    .body-svg {
+      position: absolute;
+      grid-area: 1 / 1;
+      width: auto;
+      height: min(100%, 700px);
+      max-width: 88%;
+      overflow: visible;
+      opacity: 0;
+      visibility: hidden;
+      filter: blur(6px);
+      transform: translateY(12px) scale(0.985);
+      transition:
+        opacity 0.42s ease,
+        visibility 0.42s ease,
+        filter 0.46s ease,
+        transform 0.55s var(--ease-out);
+      touch-action: manipulation;
+    }
+
+    .body-svg.is-active {
+      opacity: 1;
+      visibility: visible;
+      filter: blur(0);
+      transform: translateY(0) scale(1);
+    }
+
+    .body-figure {
+      transform-box: view-box;
+      transform-origin: 50% 100%;
+    }
+
+    .skin-fill {
+      fill: url(#skinGrad);
+      stroke: rgba(29, 31, 24, 0.72);
+      stroke-width: 1.15;
+      stroke-linejoin: round;
+    }
+
+    .skin-hand {
+      fill: #d8d1bd;
+      stroke: rgba(29, 31, 24, 0.6);
+      stroke-width: 1;
+    }
+
+    .body-line {
+      fill: none;
+      stroke: rgba(39, 42, 32, 0.4);
+      stroke-width: 0.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .body-line-soft {
+      fill: none;
+      stroke: rgba(39, 42, 32, 0.23);
+      stroke-width: 0.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .hair-shape {
+      fill: #34372c;
+      stroke: rgba(20, 22, 16, 0.8);
+      stroke-width: 0.9;
+      stroke-linejoin: round;
+    }
+
+    .muscle-zone {
+      cursor: pointer;
+      outline: none;
+      transform-box: fill-box;
+      transition: filter 0.24s ease, opacity 0.24s ease;
+    }
+
+    .muscle-zone:hover {
+      filter: drop-shadow(0 0 5px rgba(241, 90, 50, 0.12));
+    }
+
+    .muscle-shape {
+      fill: url(#muscleGrad);
+      stroke: rgba(31, 33, 26, 0.58);
+      stroke-width: 1.05;
+      stroke-linejoin: round;
+      transition: fill 0.2s ease, stroke 0.2s ease;
+    }
+
+    .muscle-detail {
+      fill: none;
+      stroke: rgba(37, 39, 31, 0.38);
+      stroke-width: 0.75;
+      stroke-linecap: round;
+      pointer-events: none;
+      transition: stroke 0.2s ease;
+    }
+
+    .muscle-zone:hover .muscle-shape,
+    .muscle-zone.is-hovered .muscle-shape {
+      fill: #e3a48c;
+      stroke: rgba(31, 33, 26, 0.8);
+    }
+
+    .muscle-zone:hover .muscle-detail,
+    .muscle-zone.is-hovered .muscle-detail {
+      stroke: rgba(41, 31, 24, 0.58);
+    }
+
+    .muscle-zone:active .muscle-shape {
+      fill: var(--accent);
+    }
+
+    .muscle-zone.is-selected {
+      filter: drop-shadow(0 0 9px rgba(241, 90, 50, 0.4));
+      animation: muscle-select 0.48s var(--ease-out);
+    }
+
+    .muscle-zone.is-selected .muscle-shape {
+      fill: var(--accent);
+      stroke: #7d2d18;
+      stroke-width: 1.15;
+    }
+
+    .muscle-zone.is-selected .muscle-detail {
+      stroke: rgba(92, 31, 16, 0.62);
+    }
+
+    @keyframes muscle-select {
+      0% {
+        opacity: 0.55;
+        filter: drop-shadow(0 0 0 rgba(241, 90, 50, 0));
+      }
+      55% {
+        opacity: 1;
+        filter: drop-shadow(0 0 14px rgba(241, 90, 50, 0.55));
+      }
+      100% {
+        opacity: 1;
+        filter: drop-shadow(0 0 9px rgba(241, 90, 50, 0.4));
+      }
+    }
+
+    .muscle-zone:focus-visible .muscle-shape {
+      stroke: var(--lime);
+      stroke-width: 2;
+    }
+
+    .muscle-passive {
+      pointer-events: none;
+    }
+
+    .muscle-passive .muscle-shape {
+      fill: #aaa28e;
+      opacity: 0.58;
+    }
+
+    .muscle-passive .muscle-detail {
+      opacity: 0.55;
+    }
+
+    .figure-shadow {
+      fill: rgba(2, 4, 1, 0.32);
+      filter: blur(3px);
+    }
+
+    .stage-foot {
+      position: absolute;
+      right: clamp(18px, 2.5vw, 30px);
+      bottom: clamp(16px, 2vw, 24px);
+      left: clamp(18px, 2.5vw, 30px);
+      z-index: 4;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .stage-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid rgba(243, 239, 228, 0.12);
+      border-radius: var(--radius-pill);
+      background: rgba(243, 239, 228, 0.055);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      color: rgba(243, 239, 228, 0.66);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .stage-hint svg {
+      width: 13px;
+      height: 13px;
+      color: var(--accent);
+    }
+
+    .stage-scale {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: rgba(243, 239, 228, 0.32);
+    }
+
+    .stage-scale i {
+      display: block;
+      width: 42px;
+      height: 1px;
+      background: rgba(243, 239, 228, 0.14);
+    }
+
+    .stage-scale strong {
+      color: rgba(243, 239, 228, 0.6);
+      font-weight: 600;
+    }
+
+    .stage-side-index {
+      position: absolute;
+      z-index: 3;
+      top: 50%;
+      right: clamp(14px, 1.6vw, 22px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 9px;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .stage-side-index span {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      color: rgba(243, 239, 228, 0.28);
+      writing-mode: vertical-rl;
+    }
+
+    .stage-side-index i {
+      width: 1px;
+      height: 38px;
+      background: rgba(243, 239, 228, 0.12);
+    }
+
+    /* ---------- 07. Drawer / action panel ---------- */
+    .drawer-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      visibility: hidden;
+      pointer-events: none;
+      transition: visibility 0s linear 0.55s;
+    }
+
+    .drawer-layer.is-open {
+      visibility: visible;
+      pointer-events: auto;
+      transition-delay: 0s;
+    }
+
+    .drawer-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(16, 18, 13, 0.48);
+      opacity: 0;
+      -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
+      transition: opacity 0.4s ease;
+    }
+
+    .drawer-layer.is-open .drawer-scrim {
+      opacity: 1;
+    }
+
+    .action-drawer {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      width: min(486px, calc(100vw - 24px));
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow-drawer);
+      transform: translateX(calc(100% + 30px));
+      transition: transform 0.55s var(--ease-out);
+      will-change: transform;
+    }
+
+    .drawer-layer.is-open .action-drawer {
+      transform: translateX(0);
+    }
+
+    .drawer-grabber {
+      display: none;
+    }
+
+    .drawer-head {
+      position: relative;
+      flex: 0 0 auto;
+      padding: 24px 26px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .drawer-head::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: -1px;
+      width: 72px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .drawer-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 40px;
+    }
+
+    .drawer-overline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .drawer-overline b {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .drawer-overline i {
+      display: block;
+      width: 18px;
+      height: 1px;
+      background: var(--line-strong);
+    }
+
+    .drawer-close {
+      flex: 0 0 auto;
+      background: var(--surface-raised);
+    }
+
+    .drawer-close:focus-visible {
+      outline: 1px solid var(--ink);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 6px rgba(241, 90, 50, 0.1);
+    }
+
+    .drawer-title-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-top: 12px;
+    }
+
+    .drawer-title {
+      margin: 0;
+      font-size: clamp(1.9rem, 3vw, 2.3rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.06em;
+    }
+
+    .drawer-title-sub {
+      display: block;
+      margin-top: 7px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .drawer-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--muted-strong);
+      white-space: nowrap;
+    }
+
+    .drawer-count::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .drawer-desc {
+      margin: 12px 0 0;
+      max-width: 38ch;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--muted-strong);
+    }
+
+    .drawer-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .equipment-filter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+      padding-bottom: 2px;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+    }
+
+    .equipment-filter::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip {
+      flex: 0 0 auto;
+      min-height: 31px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      background: transparent;
+      color: var(--muted-strong);
+      font-size: 10px;
+      font-weight: 650;
+      line-height: 1;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.18s ease, background 0.22s ease, border-color 0.22s ease, transform 0.22s var(--ease-out);
+    }
+
+    .filter-chip:hover {
+      border-color: var(--line-strong);
+      color: var(--ink);
+    }
+
+    .filter-chip.is-active {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--surface);
+    }
+
+    .filter-chip:active {
+      transform: scale(0.97);
+    }
+
+    .filter-chip::after {
+      content: attr(data-count);
+      margin-left: 5px;
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 500;
+      letter-spacing: 0;
+      opacity: 0.55;
+    }
+
+    .filter-chip.is-active::after {
+      opacity: 0.72;
+    }
+
+    .filter-chip:disabled {
+      border-color: var(--line);
+      background: transparent;
+      color: var(--muted);
+      opacity: 0.34;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 23px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: rgba(23, 26, 20, 0.025);
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0.05em;
+      color: var(--muted-strong);
+      white-space: nowrap;
+    }
+
+    .tag-accent {
+      border-color: rgba(241, 90, 50, 0.22);
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+    }
+
+    .drawer-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 18px 18px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(23, 26, 20, 0.18) transparent;
+    }
+
+    .drawer-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .drawer-scroll::-webkit-scrollbar-thumb {
+      border-radius: 99px;
+      background: rgba(23, 26, 20, 0.16);
+    }
+
+    .list-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 2px 2px 11px;
+    }
+
+    .list-heading h3 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .list-heading span {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .exercise-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .exercise-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-raised);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+      transition: border-color 0.22s ease, transform 0.28s var(--ease-out), box-shadow 0.28s ease;
+    }
+
+    .exercise-card:hover {
+      border-color: rgba(23, 26, 20, 0.22);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .exercise-card.is-expanded {
+      border-color: rgba(23, 26, 20, 0.25);
+      background: var(--surface-raised);
+      box-shadow: var(--shadow-soft);
+      transform: none;
+    }
+
+    .exercise-toggle {
+      display: grid;
+      grid-template-columns: 104px minmax(0, 1fr) 28px;
+      align-items: center;
+      gap: 13px;
+      width: 100%;
+      min-height: 106px;
+      padding: 11px;
+      border: 0;
+      border-radius: inherit;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .exercise-toggle:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .exercise-toggle:active {
+      background: rgba(23, 26, 20, 0.025);
+    }
+
+    .exercise-card:focus-within {
+      border-color: rgba(241, 90, 50, 0.28);
+    }
+
+    .exercise-visual {
+      position: relative;
+      display: block;
+      align-self: stretch;
+      min-height: 82px;
+      overflow: hidden;
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 75% 18%, rgba(255, 255, 255, 0.86), transparent 34%),
+        linear-gradient(145deg, #eee8db, #ded6c5);
+    }
+
+    .exercise-visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(23, 26, 20, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23, 26, 20, 0.06) 1px, transparent 1px);
+      background-size: 20px 20px;
+      mask-image: linear-gradient(135deg, black, transparent 78%);
+    }
+
+    .exercise-visual::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      bottom: -26px;
+      width: 78px;
+      height: 78px;
+      border: 1px solid rgba(23, 26, 20, 0.12);
+      border-radius: 50%;
+      box-shadow: 0 0 0 16px rgba(23, 26, 20, 0.025);
+      pointer-events: none;
+    }
+
+    .demo-placeholder {
+      position: absolute;
+      z-index: 1;
+      inset: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border: 1px dashed rgba(23, 26, 20, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.22);
+      pointer-events: none;
+      transition: border-color 0.25s ease, background 0.25s ease;
+    }
+
+    .exercise-toggle:hover .demo-placeholder {
+      border-color: rgba(241, 90, 50, 0.4);
+      background: rgba(255, 253, 248, 0.46);
+    }
+
+    .demo-play {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--surface);
+      transition: background 0.25s ease, transform 0.3s var(--ease-out);
+    }
+
+    .exercise-toggle:hover .demo-play {
+      background: var(--accent);
+      transform: scale(1.06);
+    }
+
+    .demo-play svg {
+      width: 9px;
+      height: 9px;
+      margin-left: 1px;
+    }
+
+    .demo-placeholder-label {
+      color: var(--ink-soft);
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .demo-slot {
+      color: rgba(23, 26, 20, 0.34);
+      font-family: var(--font-mono);
+      font-size: 6px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .exercise-copy {
+      display: block;
+      min-width: 0;
+      align-self: center;
+    }
+
+    .exercise-tags {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-bottom: 7px;
+    }
+
+    .exercise-tags .tag {
+      min-height: 19px;
+      padding: 2px 6px;
+      font-size: 7px;
+    }
+
+    .exercise-name {
+      display: block;
+      overflow: hidden;
+      font-size: 14px;
+      font-weight: 720;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .exercise-target {
+      display: block;
+      margin: 5px 0 0;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.5;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .exercise-expand-icon {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--muted-strong);
+      transition: color 0.22s ease, background 0.22s ease, border-color 0.22s ease;
+    }
+
+    .exercise-expand-icon svg {
+      width: 12px;
+      height: 12px;
+      transition: transform 0.3s var(--ease-out);
+    }
+
+    .exercise-card.is-expanded .exercise-expand-icon {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--surface);
+    }
+
+    .exercise-card.is-expanded .exercise-expand-icon svg {
+      transform: rotate(45deg);
+    }
+
+    .exercise-details {
+      display: grid;
+      grid-template-rows: 0fr;
+      visibility: hidden;
+      transition: grid-template-rows 0.38s var(--ease-out), visibility 0s linear 0.38s;
+    }
+
+    .exercise-details-inner {
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .exercise-details-body {
+      margin: 0 11px 11px;
+      padding: 12px 13px;
+      border-top: 1px solid var(--line);
+      border-radius: 0 0 12px 12px;
+      background: #f5f1e7;
+    }
+
+    .exercise-card.is-expanded .exercise-details {
+      grid-template-rows: 1fr;
+      visibility: visible;
+      transition-delay: 0s;
+    }
+
+    .detail-kicker {
+      display: block;
+      margin-bottom: 7px;
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+    }
+
+    .detail-copy {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .detail-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 11px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .detail-meta span {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      color: var(--muted-strong);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    .detail-meta b {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .filter-empty {
+      display: grid;
+      place-items: center;
+      min-height: 176px;
+      padding: 28px 20px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius-md);
+      text-align: center;
+    }
+
+    .filter-empty span {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+    }
+
+    .filter-empty strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .filter-empty p {
+      margin: 5px 0 0;
+      font-size: 10px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .drawer-foot {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 22px calc(13px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: rgba(250, 248, 242, 0.9);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    .drawer-foot p {
+      margin: 0;
+      font-size: 9px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .drawer-foot .micro-label {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ---------- 08. Responsive ---------- */
+    @media (max-width: 1180px) {
+      .topbar-note {
+        display: none;
+      }
+
+      .page-shell {
+        grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
+      }
+
+      .hero-title {
+        font-size: clamp(3.1rem, 5.8vw, 4.8rem);
+      }
+
+      .focus-card {
+        width: 158px;
+      }
+    }
+
+    @media (max-width: 920px) and (min-width: 769px) {
+      .page-shell {
+        grid-template-columns: minmax(280px, 0.68fr) minmax(0, 1.32fr);
+      }
+
+      .hero-title {
+        font-size: clamp(2.8rem, 5.5vw, 3.8rem);
+      }
+
+      .hero-lede {
+        font-size: 0.9rem;
+      }
+
+      .control-label {
+        display: none;
+      }
+
+      .process-list strong {
+        white-space: normal;
+      }
+
+      .focus-card {
+        display: none;
+      }
+    }
+
+    /* Main responsive breakpoint */
+    @media (max-width: 768px) {
+      :root {
+        --header-height: auto;
+        --radius-xl: 24px;
+      }
+
+      .topbar {
+        gap: 12px;
+        min-height: 62px;
+        padding: 10px 16px;
+      }
+
+      .brand {
+        gap: 8px;
+      }
+
+      .brand-mark {
+        width: 31px;
+        height: 31px;
+        border-radius: 9px;
+      }
+
+      .brand-mark svg {
+        width: 29px;
+        height: 29px;
+      }
+
+      .brand-copy strong {
+        font-size: 15px;
+      }
+
+      .brand-copy small {
+        display: none;
+      }
+
+      .header-controls {
+        gap: 8px;
+      }
+
+      .control-unit {
+        gap: 0;
+      }
+
+      .control-label {
+        display: none;
+      }
+
+      .segment {
+        padding: 2px;
+      }
+
+      .segment button {
+        min-width: 36px;
+        min-height: 31px;
+        padding: 0 9px;
+        font-size: 11px;
+      }
+
+      .page-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .hero {
+        gap: 24px;
+        padding: 14px 4px 4px;
+      }
+
+      .hero-title {
+        margin-top: 17px;
+        font-size: clamp(2.85rem, 10.5vw, 4rem);
+        line-height: 0.99;
+      }
+
+      .hero-lede {
+        max-width: 33ch;
+        margin-top: 16px;
+        font-size: 0.91rem;
+        line-height: 1.75;
+      }
+
+      .hero-actions {
+        margin-top: 21px;
+      }
+
+      .primary-btn {
+        min-height: 44px;
+        font-size: 12px;
+      }
+
+      .primary-btn .btn-icon {
+        width: 33px;
+        height: 33px;
+      }
+
+      .hero-aside-note {
+        display: none;
+      }
+
+      .hero-footer {
+        gap: 16px;
+        padding-top: 17px;
+      }
+
+      .process-list {
+        display: none;
+      }
+
+      .hero-meta {
+        justify-content: flex-start;
+        gap: 14px;
+      }
+
+      .stat-row {
+        gap: 14px;
+      }
+
+      .stat strong {
+        font-size: 18px;
+      }
+
+      .hero-signature {
+        display: none;
+      }
+
+      .body-stage {
+        min-height: 0;
+        height: min(77svh, 720px);
+        min-height: 470px;
+        border-radius: var(--radius-xl);
+      }
+
+      .body-stage::after {
+        width: min(110vw, 460px);
+      }
+
+      .stage-head {
+        top: 17px;
+        left: 17px;
+        right: 17px;
+      }
+
+      .stage-label {
+        font-size: 8px;
+        letter-spacing: 0.1em;
+      }
+
+      .stage-code {
+        gap: 7px;
+        font-size: 7px;
+        letter-spacing: 0.08em;
+      }
+
+      .stage-code i {
+        width: 15px;
+      }
+
+      .stage-head .stage-code span:first-child {
+        display: none;
+      }
+
+      .focus-card {
+        display: none;
+      }
+
+      .figure-zone {
+        inset: 42px 0 48px;
+      }
+
+      .body-svg {
+        height: 100%;
+        max-width: 92%;
+      }
+
+      .figure-plinth {
+        bottom: 2.5%;
+        width: 190px;
+        height: 22px;
+      }
+
+      .stage-foot {
+        bottom: 13px;
+        left: 15px;
+        right: 15px;
+      }
+
+      .stage-hint {
+        min-height: 31px;
+        padding: 6px 10px;
+        font-size: 9px;
+      }
+
+      .stage-scale {
+        display: none;
+      }
+
+      .stage-side-index {
+        right: 8px;
+        opacity: 0.7;
+      }
+
+      .action-drawer {
+        top: auto;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: min(70svh, 680px);
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        transform: translateY(calc(100% + 16px));
+      }
+
+      .drawer-layer.is-open .action-drawer {
+        transform: translateY(0);
+      }
+
+      .action-drawer.is-dragging {
+        transition: none;
+        user-select: none;
+      }
+
+      .drawer-grabber {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        height: 22px;
+        padding-top: 8px;
+        touch-action: pan-x;
+      }
+
+      .drawer-grabber span {
+        width: 36px;
+        height: 4px;
+        border-radius: 99px;
+        background: rgba(23, 26, 20, 0.15);
+        transition: width 0.24s var(--ease-out), background 0.24s ease;
+      }
+
+      .action-drawer.is-dragging .drawer-grabber span {
+        width: 48px;
+        background: var(--accent);
+      }
+
+      .drawer-head {
+        padding: 7px 20px 14px;
+        touch-action: pan-x;
+      }
+
+      .drawer-title {
+        font-size: 1.9rem;
+      }
+
+      .drawer-desc {
+        font-size: 11px;
+      }
+
+      .drawer-meta {
+        margin-top: 11px;
+      }
+
+      .equipment-filter {
+        margin-top: 11px;
+      }
+
+      .filter-chip {
+        min-height: 30px;
+        padding: 0 11px;
+        font-size: 9px;
+      }
+
+      .drawer-scroll {
+        padding: 14px 14px 6px;
+      }
+
+      .exercise-toggle {
+        grid-template-columns: 98px minmax(0, 1fr) 26px;
+        min-height: 100px;
+        gap: 11px;
+        padding: 9px;
+      }
+
+      .exercise-visual {
+        min-height: 76px;
+      }
+
+      .exercise-expand-icon {
+        width: 26px;
+        height: 26px;
+      }
+
+      .exercise-details-body {
+        margin: 0 9px 9px;
+        padding: 11px;
+      }
+
+      .drawer-foot {
+        padding: 11px 18px calc(11px + env(safe-area-inset-bottom));
+      }
+
+      .drawer-foot .micro-label {
+        display: none;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .topbar {
+        padding-inline: 12px;
+      }
+
+      .brand-copy strong {
+        font-size: 14px;
+      }
+
+      .segment button {
+        min-width: 33px;
+        padding-inline: 7px;
+      }
+
+      .hero-title {
+        font-size: 2.7rem;
+      }
+
+      .hero-lede {
+        font-size: 0.86rem;
+      }
+
+      .body-stage {
+        min-height: 430px;
+      }
+
+      .action-drawer {
+        height: 74svh;
+      }
+
+      .exercise-toggle {
+        grid-template-columns: 86px minmax(0, 1fr) 24px;
+        gap: 9px;
+      }
+
+      .exercise-name {
+        font-size: 13px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="肌理 MUSCLE ATLAS 首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M9 29.5 13.8 10l6.2 9.2 6.2-9.2L31 29.5" stroke="#f15a32" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 33h26" stroke="rgba(243,239,228,.22)" stroke-width="1"/>
+        </svg>
+      </span>
+      <span class="brand-copy">
+        <strong>肌理</strong>
+        <small>MUSCLE ATLAS</small>
+      </span>
+    </a>
+
+    <p class="topbar-note"><span class="status-dot" aria-hidden="true"></span>为训练而生的轻量工具</p>
+
+    <div class="header-controls" aria-label="人体视图设置">
+      <div class="control-unit">
+        <span class="control-label">模型</span>
+        <span class="model-static"><span class="status-dot" aria-hidden="true"></span>男性</span>
+      </div>
+      <div class="control-unit js-view">
+        <span class="control-label" id="viewLabel">视角</span>
+        <div class="segment" role="group" aria-labelledby="viewLabel">
+          <button type="button" class="is-active" data-value="front" aria-pressed="true">正面</button>
+          <button type="button" data-value="back" aria-pressed="false">背面</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell" id="main">
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-main">
+        <p class="eyebrow">Interactive muscle map / 01</p>
+        <h1 class="hero-title" id="heroTitle">点准肌群，<span>练对动作。</span></h1>
+        <p class="hero-lede">从身体出发，而不是从动作清单出发。选择任意肌群，即刻查看针对性的训练动作、循环演示与专业要点。</p>
+        <div class="hero-actions">
+          <button type="button" class="primary-btn" id="exploreBtn">
+            <span>开始探索</span>
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M3 13 13 3M5 3h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </button>
+          <span class="hero-aside-note">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 1.5v5.2l3.1 1.8M14.5 8A6.5 6.5 0 1 1 1.5 8a6.5 6.5 0 0 1 13 0Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            60+ 精编动作 · 即开即用
+          </span>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        <ol class="process-list" aria-label="使用步骤">
+          <li>
+            <span>01 / SELECT</span>
+            <strong>选择肌群</strong>
+          </li>
+          <li>
+            <span>02 / EXPLORE</span>
+            <strong>浏览动作</strong>
+          </li>
+          <li>
+            <span>03 / APPLY</span>
+            <strong>掌握要点</strong>
+          </li>
+        </ol>
+        <div class="hero-meta">
+          <div class="stat-row" aria-label="产品数据">
+            <span class="stat"><strong>10</strong>肌群</span>
+            <span class="stat"><strong>60</strong>动作</span>
+            <span class="stat"><strong>0</strong>登录</span>
+          </div>
+          <span class="hero-signature"><i aria-hidden="true"></i>PURE TRAINING TOOL</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="body-stage" id="stage" data-view="front" aria-label="交互式人体肌肉图">
+      <div class="stage-glow" aria-hidden="true"></div>
+
+      <div class="stage-head">
+        <span class="stage-label"><span class="status-dot" aria-hidden="true"></span>Interactive anatomy</span>
+        <span class="stage-code"><span>Model 01</span><i aria-hidden="true"></i><span id="stageCode">Male · Anterior</span></span>
+      </div>
+
+      <div class="focus-card" id="focusCard" aria-hidden="true">
+        <div class="focus-card-top"><span class="status-dot" aria-hidden="true"></span>Current focus</div>
+        <strong class="focus-name" id="focusName">肌群图谱</strong>
+        <span class="focus-meta" id="focusMeta">HOVER / TAP TO EXPLORE</span>
+      </div>
+
+      <div class="figure-zone">
+        <span class="figure-plinth" aria-hidden="true"></span>
+
+        <svg class="body-svg is-active" data-body="front" viewBox="0 0 360 680" role="group" aria-label="男性人体正面肌肉图">
+          <ellipse class="figure-shadow" cx="180" cy="636" rx="88" ry="12"/>
+
+          <g class="body-figure">
+            <!-- 左腿 -->
+            <path class="skin-fill" d="M174 367c-15-5-28 2-35 16l-17 73c-5 19 2 34 17 38 15 4 29-6 33-19l11-80c2-12-2-23-9-28Z"/>
+            <path class="skin-fill" d="M137 490c-12 3-20 13-22 27l-9 51c-2 14 6 27 19 29 14 2 25-7 26-21l8-58c2-15-7-26-22-28Z"/>
+            <path class="skin-fill" d="M113 585c-12 6-22 16-19 27 4 12 19 14 36 10l18-5c10-3 9-12 1-15l-15-5c-8-3-14-6-21-12Z"/>
+            <!-- 右腿 -->
+            <g transform="translate(360 0) scale(-1 1)">
+              <path class="skin-fill" d="M174 367c-15-5-28 2-35 16l-17 73c-5 19 2 34 17 38 15 4 29-6 33-19l11-80c2-12-2-23-9-28Z"/>
+              <path class="skin-fill" d="M137 490c-12 3-20 13-22 27l-9 51c-2 14 6 27 19 29 14 2 25-7 26-21l8-58c2-15-7-26-22-28Z"/>
+              <path class="skin-fill" d="M113 585c-12 6-22 16-19 27 4 12 19 14 36 10l18-5c10-3 9-12 1-15l-15-5c-8-3-14-6-21-12Z"/>
+            </g>
+
+            <!-- 左臂 -->
+            <path class="skin-fill" d="M132 125c-16 4-28 15-32 32l-13 81c-3 16 4 29 17 33 13 4 25-6 27-19l12-86c3-17-3-32-11-41Z"/>
+            <path class="skin-fill" d="M99 268c-10 12-15 30-18 50l-7 49c-2 16 5 28 18 30 13 2 23-7 24-20l7-62c2-18-4-35-12-46Z"/>
+            <path class="skin-fill" d="M77 382c-10 7-13 21-8 34 4 12 13 18 22 15 8-3 12-14 9-25l-4-18c-3-9-11-11-19-6Z"/>
+            <!-- 右臂 -->
+            <g transform="translate(360 0) scale(-1 1)">
+              <path class="skin-fill" d="M132 125c-16 4-28 15-32 32l-13 81c-3 16 4 29 17 33 13 4 25-6 27-19l12-86c3-17-3-32-11-41Z"/>
+              <path class="skin-fill" d="M99 268c-10 12-15 30-18 50l-7 49c-2 16 5 28 18 30 13 2 23-7 24-20l7-62c2-18-4-35-12-46Z"/>
+              <path class="skin-fill" d="M77 382c-10 7-13 21-8 34 4 12 13 18 22 15 8-3 12-14 9-25l-4-18c-3-9-11-11-19-6Z"/>
+            </g>
+
+            <!-- 躯干 -->
+            <path class="skin-fill" d="M180 108c-27 0-43 11-51 26-10 18-15 42-16 66-1 24 5 42 10 58 4 14 8 22 9 34 1 14-3 28-5 41-3 17 2 34 17 41 12 6 22 4 28-5 3-5 13-5 16 0 6 9 16 11 28 5 15-7 20-24 17-41-2-13-6-27-5-41 1-12 5-20 9-34 5-16 11-34 10-58-1-24-6-48-16-66-8-15-24-26-51-26Z"/>
+
+            <!-- 颈与头 -->
+            <path class="skin-fill" d="M162 84h36l4 28c-9 8-35 8-44 0l4-28Z"/>
+            <ellipse class="skin-fill" cx="180" cy="56" rx="28" ry="35"/>
+            <path class="hair-shape" d="M152 51c-1-24 12-40 29-40 19 0 29 14 29 36-7-5-14-12-21-18-8 10-20 18-37 22Z"/>
+            <ellipse cx="152" cy="58" rx="4.5" ry="7" fill="#d5cdb9" stroke="rgba(29,31,24,.4)" stroke-width=".8"/>
+            <ellipse cx="208" cy="58" rx="4.5" ry="7" fill="#d5cdb9" stroke="rgba(29,31,24,.4)" stroke-width=".8"/>
+            <path class="body-line-soft" d="M169 73c3 3 19 3 22 0M175 82c3 2 7 2 10 0"/>
+            <path class="body-line" d="M160 109c5 9 35 9 40 0M180 86v22"/>
+
+            <!-- 锁骨与结构线 -->
+            <path class="body-line" d="M136 148c12-8 26-11 44-11s32 3 44 11M180 148v61"/>
+            <path class="body-line-soft" d="M119 232c9 1 17-4 23-13M241 232c-9 1-17-4-23-13M115 355c9-6 17-7 28-5M245 355c-9-6-17-7-28-5"/>
+
+            <!-- 胸大肌 -->
+            <g class="muscle-zone" data-muscle="chest" data-name="胸大肌" data-latin="PECTORALIS MAJOR" data-count="6" role="button" tabindex="0" aria-label="胸大肌，查看训练动作">
+              <path class="muscle-shape" d="M177 149c-14-9-31-10-41 0-9 9-13 23-11 38 2 13 11 23 23 26 12 3 23-6 28-17l3-23 1-16Z"/>
+              <path class="muscle-detail" d="M163 153c-12-2-22 4-27 13M134 168c11 3 20 9 24 19M159 183c6-2 11-7 14-13"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M177 149c-14-9-31-10-41 0-9 9-13 23-11 38 2 13 11 23 23 26 12 3 23-6 28-17l3-23 1-16Z"/>
+                <path class="muscle-detail" d="M163 153c-12-2-22 4-27 13M134 168c11 3 20 9 24 19M159 183c6-2 11-7 14-13"/>
+              </g>
+            </g>
+
+            <!-- 三角肌 -->
+            <g class="muscle-zone" data-muscle="shoulders" data-name="三角肌" data-latin="DELTOIDS" data-count="6" role="button" tabindex="0" aria-label="三角肌，查看训练动作">
+              <path class="muscle-shape" d="M133 124c-14 3-27 15-31 31-2 13 4 25 15 27 12 2 22-9 26-24l3-17c-3-10-7-15-13-17Z"/>
+              <path class="muscle-detail" d="M116 135c7 9 10 20 9 32M126 130c5 11 6 24 3 37"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M133 124c-14 3-27 15-31 31-2 13 4 25 15 27 12 2 22-9 26-24l3-17c-3-10-7-15-13-17Z"/>
+                <path class="muscle-detail" d="M116 135c7 9 10 20 9 32M126 130c5 11 6 24 3 37"/>
+              </g>
+            </g>
+
+            <!-- 肱二头肌 -->
+            <g class="muscle-zone" data-muscle="biceps" data-name="肱二头肌" data-latin="BICEPS" data-count="6" role="button" tabindex="0" aria-label="肱二头肌，查看训练动作">
+              <path class="muscle-shape" d="M130 141c-12 5-20 15-22 27l-11 63c-3 13 4 23 14 24 12 1 21-8 23-21l8-58c2-14-4-27-12-35Z"/>
+              <path class="muscle-detail" d="M123 152c-8 12-12 27-14 43l-3 19M116 149c-7 15-11 30-13 46"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M130 141c-12 5-20 15-22 27l-11 63c-3 13 4 23 14 24 12 1 21-8 23-21l8-58c2-14-4-27-12-35Z"/>
+                <path class="muscle-detail" d="M123 152c-8 12-12 27-14 43l-3 19M116 149c-7 15-11 30-13 46"/>
+              </g>
+            </g>
+
+            <!-- 腹部核心 -->
+            <g class="muscle-zone" data-muscle="abs" data-name="腹部核心" data-latin="CORE" data-count="6" role="button" tabindex="0" aria-label="腹部核心，查看训练动作">
+              <path class="muscle-shape" d="M160 213c-4-2-8 1-8 6l1 13c0 4 3 7 7 6l15-2 1-21c-6-3-11-4-16-2Z"/>
+              <path class="muscle-shape" d="M200 213c4-2 8 1 8 6l-1 13c0 4-3 7-7 6l-15-2-1-21c6-3 11-4 16-2Z"/>
+              <path class="muscle-shape" d="M160 239c-4-1-8 2-8 7l1 10c0 4 3 6 7 6l14-1 1-20c-5-2-10-3-15-2Z"/>
+              <path class="muscle-shape" d="M200 239c4-1 8 2 8 7l-1 10c0 4-3 6-7 6l-14-1-1-20c5-2 10-3 15-2Z"/>
+              <path class="muscle-shape" d="M160 264c-4-1-7 2-7 6l1 11c0 4 3 6 6 6l13-1 1-20c-4-1-9-2-14-2Z"/>
+              <path class="muscle-shape" d="M200 264c4-1 7 2 7 6l-1 11c0 4-3 6-6 6l-13-1-1-20c4-1 9-2 14-2Z"/>
+              <path class="muscle-shape" d="M157 291c-11-8-17-22-17-38 0-11 3-21 8-28l9 12-3 41 3 13Z"/>
+              <path class="muscle-shape" d="M203 291c11-8 17-22 17-38 0-11-3-21-8-28l-9 12 3 41-3 13Z"/>
+              <path class="muscle-detail" d="M180 217v77M153 244h54M153 270h54M147 231c7 10 10 25 8 42M213 231c-7 10-10 25-8 42"/>
+            </g>
+
+            <!-- 股四头肌 -->
+            <g class="muscle-zone" data-muscle="quads" data-name="股四头肌" data-latin="QUADRICEPS" data-count="6" role="button" tabindex="0" aria-label="股四头肌，查看训练动作">
+              <path class="muscle-shape" d="M168 381c-12-2-24 6-28 20l-10 50c-4 16 3 29 15 31 13 2 23-7 26-21l9-49c1-12-5-25-12-31Z"/>
+              <path class="muscle-detail" d="M158 391c-6 9-9 21-11 33l-5 31M149 385c-5 17-8 36-9 55M165 398c-2 18-4 37-8 55"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M168 381c-12-2-24 6-28 20l-10 50c-4 16 3 29 15 31 13 2 23-7 26-21l9-49c1-12-5-25-12-31Z"/>
+                <path class="muscle-detail" d="M158 391c-6 9-9 21-11 33l-5 31M149 385c-5 17-8 36-9 55M165 398c-2 18-4 37-8 55"/>
+              </g>
+            </g>
+
+            <!-- 腓肠肌 -->
+            <g class="muscle-zone" data-muscle="gastrocnemius" data-name="腓肠肌" data-latin="GASTROCNEMIUS" data-count="6" role="button" tabindex="0" aria-label="腓肠肌，查看训练动作">
+              <path class="muscle-shape" d="M128 502c-10 6-14 18-11 31 3 14 11 27 22 35 7 5 14 0 13-7l-5-45c-2-12-10-21-19-14Z"/>
+              <path class="muscle-detail" d="M123 512c5 12 10 24 17 35M130 507c3 14 5 28 6 41"/>
+              <path class="muscle-shape" d="M143 500c9 5 11 16 10 27l-2 31c-1 10-7 14-12 9-3-3-4-9-3-17l4-43Z"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M128 502c-10 6-14 18-11 31 3 14 11 27 22 35 7 5 14 0 13-7l-5-45c-2-12-10-21-19-14Z"/>
+                <path class="muscle-detail" d="M123 512c5 12 10 24 17 35M130 507c3 14 5 28 6 41"/>
+                <path class="muscle-shape" d="M143 500c9 5 11 16 10 27l-2 31c-1 10-7 14-12 9-3-3-4-9-3-17l4-43Z"/>
+              </g>
+            </g>
+
+            <!-- 膝、腕、踝结构线 -->
+            <path class="body-line" d="M127 486c9-3 18-2 26 2M235 488c-9-3-18-2-26 2M120 594c7-4 15-3 22 0M238 594c-7-4-15-3-22 0"/>
+            <path class="body-line-soft" d="M97 275c7 1 13-1 17-6M263 275c-7 1-13-1-17-6M91 380c5 0 9-2 12-7M269 380c-5 0-9-2-12-7"/>
+          </g>
+        </svg>
+
+        <svg class="body-svg" data-body="back" viewBox="0 0 360 680" role="group" aria-label="男性人体背面肌肉图" aria-hidden="true">
+          <ellipse class="figure-shadow" cx="180" cy="636" rx="88" ry="12"/>
+
+          <g class="body-figure">
+            <!-- 左腿 -->
+            <path class="skin-fill" d="M174 367c-15-5-28 2-35 16l-17 73c-5 19 2 34 17 38 15 4 29-6 33-19l11-80c2-12-2-23-9-28Z"/>
+            <path class="skin-fill" d="M137 490c-12 3-20 13-22 27l-9 51c-2 14 6 27 19 29 14 2 25-7 26-21l8-58c2-15-7-26-22-28Z"/>
+            <path class="skin-fill" d="M113 585c-12 6-22 16-19 27 4 12 19 14 36 10l18-5c10-3 9-12 1-15l-15-5c-8-3-14-6-21-12Z"/>
+            <!-- 右腿 -->
+            <g transform="translate(360 0) scale(-1 1)">
+              <path class="skin-fill" d="M174 367c-15-5-28 2-35 16l-17 73c-5 19 2 34 17 38 15 4 29-6 33-19l11-80c2-12-2-23-9-28Z"/>
+              <path class="skin-fill" d="M137 490c-12 3-20 13-22 27l-9 51c-2 14 6 27 19 29 14 2 25-7 26-21l8-58c2-15-7-26-22-28Z"/>
+              <path class="skin-fill" d="M113 585c-12 6-22 16-19 27 4 12 19 14 36 10l18-5c10-3 9-12 1-15l-15-5c-8-3-14-6-21-12Z"/>
+            </g>
+
+            <!-- 左臂 -->
+            <path class="skin-fill" d="M132 125c-16 4-28 15-32 32l-13 81c-3 16 4 29 17 33 13 4 25-6 27-19l12-86c3-17-3-32-11-41Z"/>
+            <path class="skin-fill" d="M99 268c-10 12-15 30-18 50l-7 49c-2 16 5 28 18 30 13 2 23-7 24-20l7-62c2-18-4-35-12-46Z"/>
+            <path class="skin-fill" d="M77 382c-10 7-13 21-8 34 4 12 13 18 22 15 8-3 12-14 9-25l-4-18c-3-9-11-11-19-6Z"/>
+            <!-- 右臂 -->
+            <g transform="translate(360 0) scale(-1 1)">
+              <path class="skin-fill" d="M132 125c-16 4-28 15-32 32l-13 81c-3 16 4 29 17 33 13 4 25-6 27-19l12-86c3-17-3-32-11-41Z"/>
+              <path class="skin-fill" d="M99 268c-10 12-15 30-18 50l-7 49c-2 16 5 28 18 30 13 2 23-7 24-20l7-62c2-18-4-35-12-46Z"/>
+              <path class="skin-fill" d="M77 382c-10 7-13 21-8 34 4 12 13 18 22 15 8-3 12-14 9-25l-4-18c-3-9-11-11-19-6Z"/>
+            </g>
+
+            <!-- 躯干 -->
+            <path class="skin-fill" d="M180 108c-27 0-43 11-51 26-10 18-15 42-16 66-1 24 5 42 10 58 4 14 8 22 9 34 1 14-3 28-5 41-3 17 2 34 17 41 12 6 22 4 28-5 3-5 13-5 16 0 6 9 16 11 28 5 15-7 20-24 17-41-2-13-6-27-5-41 1-12 5-20 9-34 5-16 11-34 10-58-1-24-6-48-16-66-8-15-24-26-51-26Z"/>
+
+            <!-- 颈与头 -->
+            <path class="skin-fill" d="M162 84h36l4 28c-9 8-35 8-44 0l4-28Z"/>
+            <ellipse cx="180" cy="55" rx="28" ry="34" fill="#34372c" stroke="rgba(20,22,16,.8)" stroke-width=".9"/>
+            <path d="M180 22v65M163 34c10 12 20 18 35 19M197 34c-5 13-12 22-21 31" fill="none" stroke="rgba(243,239,228,.13)" stroke-width="1" stroke-linecap="round"/>
+            <ellipse cx="152" cy="59" rx="4.3" ry="7" fill="#d5cdb9" stroke="rgba(29,31,24,.4)" stroke-width=".8"/>
+            <ellipse cx="208" cy="59" rx="4.3" ry="7" fill="#d5cdb9" stroke="rgba(29,31,24,.4)" stroke-width=".8"/>
+            <path class="body-line" d="M160 109c5 9 35 9 40 0"/>
+
+            <!-- 背部结构线 -->
+            <path class="body-line" d="M180 112v233M140 151c12 8 25 14 40 17s28-1 41-9M128 257c14 8 30 12 52 12s38-4 52-12"/>
+            <path class="body-line-soft" d="M122 228c7 4 13 4 19 1M238 228c-7 4-13 4-19 1M121 354c9-6 17-7 28-5M239 354c-9-6-17-7-28-5M134 397c10 9 25 13 46 13s36-4 46-13"/>
+
+            <!-- 斜方肌 / 竖脊肌：背景解剖结构，不参与点击 -->
+            <g class="muscle-passive" aria-hidden="true">
+              <path class="muscle-shape" d="M180 116c-18-1-36 7-48 16 10 7 20 18 29 33l18 32 1-47Z"/>
+              <path class="muscle-shape" d="M161 270c-6 17-7 39-3 59 2 12 9 19 16 15l5-6v-59Z"/>
+              <path class="muscle-detail" d="M146 144c8 13 16 26 22 40M171 281c-1 15-1 32 1 47"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M180 116c-18-1-36 7-48 16 10 7 20 18 29 33l18 32 1-47Z"/>
+                <path class="muscle-shape" d="M161 270c-6 17-7 39-3 59 2 12 9 19 16 15l5-6v-59Z"/>
+                <path class="muscle-detail" d="M146 144c8 13 16 26 22 40M171 281c-1 15-1 32 1 47"/>
+              </g>
+            </g>
+
+            <!-- 背阔肌 -->
+            <g class="muscle-zone" data-muscle="lats" data-name="背阔肌" data-latin="LATISSIMUS DORSI" data-count="6" role="button" tabindex="0" aria-label="背阔肌，查看训练动作">
+              <path class="muscle-shape" d="M132 164c-6 23-4 52 3 77 5 18 13 35 25 48l16-9 2-88-21-22Z"/>
+              <path class="muscle-detail" d="M137 188c8 11 14 23 18 36M150 255c-3 18-1 37 4 53"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M132 164c-6 23-4 52 3 77 5 18 13 35 25 48l16-9 2-88-21-22Z"/>
+                <path class="muscle-detail" d="M137 188c8 11 14 23 18 36M150 255c-3 18-1 37 4 53"/>
+              </g>
+            </g>
+
+            <!-- 三角肌后束 -->
+            <g class="muscle-zone" data-muscle="shoulders" data-name="三角肌" data-latin="DELTOIDS" data-count="6" role="button" tabindex="0" aria-label="三角肌，查看训练动作">
+              <path class="muscle-shape" d="M133 124c-14 3-27 15-31 31-2 13 4 25 15 27 12 2 22-9 26-24l3-17c-3-10-7-15-13-17Z"/>
+              <path class="muscle-detail" d="M116 136c6 10 8 22 6 35M127 130c4 12 4 26 1 38"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M133 124c-14 3-27 15-31 31-2 13 4 25 15 27 12 2 22-9 26-24l3-17c-3-10-7-15-13-17Z"/>
+                <path class="muscle-detail" d="M116 136c6 10 8 22 6 35M127 130c4 12 4 26 1 38"/>
+              </g>
+            </g>
+
+            <!-- 肱三头肌 -->
+            <g class="muscle-zone" data-muscle="triceps" data-name="肱三头肌" data-latin="TRICEPS" data-count="6" role="button" tabindex="0" aria-label="肱三头肌，查看训练动作">
+              <path class="muscle-shape" d="M130 143c-14 5-23 16-26 30l-9 65c-2 14 5 25 17 27 12 1 22-8 24-21l7-63c2-16-4-29-13-38Z"/>
+              <path class="muscle-detail" d="M122 154c-7 13-11 29-13 45l-3 27M116 151c-5 16-8 32-10 49"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M130 143c-14 5-23 16-26 30l-9 65c-2 14 5 25 17 27 12 1 22-8 24-21l7-63c2-16-4-29-13-38Z"/>
+                <path class="muscle-detail" d="M122 154c-7 13-11 29-13 45l-3 27M116 151c-5 16-8 32-10 49"/>
+              </g>
+            </g>
+
+            <!-- 臀部 -->
+            <g class="muscle-zone" data-muscle="glutes" data-name="臀部" data-latin="GLUTES" data-count="6" role="button" tabindex="0" aria-label="臀部，查看训练动作">
+              <path class="muscle-shape" d="M178 348c-14-6-30-1-39 11-9 12-7 29 2 40 10 12 24 15 33 8l5-9 2-50Z"/>
+              <path class="muscle-detail" d="M160 356c-11 1-19 8-23 18M150 380c-4 8-1 17 7 22M169 356c-5 9-5 20 0 28"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M178 348c-14-6-30-1-39 11-9 12-7 29 2 40 10 12 24 15 33 8l5-9 2-50Z"/>
+                <path class="muscle-detail" d="M160 356c-11 1-19 8-23 18M150 380c-4 8-1 17 7 22M169 356c-5 9-5 20 0 28"/>
+              </g>
+            </g>
+
+            <!-- 腘绳肌 -->
+            <g class="muscle-zone" data-muscle="hamstrings" data-name="腘绳肌" data-latin="HAMSTRINGS" data-count="6" role="button" tabindex="0" aria-label="腘绳肌，查看训练动作">
+              <path class="muscle-shape" d="M168 402c-14-3-27 5-31 19l-11 37c-4 17 4 31 17 34 13 3 25-6 28-20l8-49c2-12-3-18-11-21Z"/>
+              <path class="muscle-detail" d="M159 411c-7 10-11 23-14 37l-6 31M153 407c-5 17-9 36-12 55M166 419c-2 18-5 36-9 53"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M168 402c-14-3-27 5-31 19l-11 37c-4 17 4 31 17 34 13 3 25-6 28-20l8-49c2-12-3-18-11-21Z"/>
+                <path class="muscle-detail" d="M159 411c-7 10-11 23-14 37l-6 31M153 407c-5 17-9 36-12 55M166 419c-2 18-5 36-9 53"/>
+              </g>
+            </g>
+
+            <!-- 腓肠肌 -->
+            <g class="muscle-zone" data-muscle="gastrocnemius" data-name="腓肠肌" data-latin="GASTROCNEMIUS" data-count="6" role="button" tabindex="0" aria-label="腓肠肌，查看训练动作">
+              <path class="muscle-shape" d="M136 500c-12 6-19 20-18 37 1 18 9 37 22 46 7 4 13-1 12-11l-1-56c0-10-8-19-15-16Z"/>
+              <path class="muscle-detail" d="M130 511c-3 16-2 33 4 48M137 506c1 17 3 34 8 50"/>
+              <path class="muscle-shape" d="M135 507c-6 14-7 34-3 54 2 10 8 14 12 9 2-3 2-10 1-19l-4-45c-2-8-4-7-6 1Z"/>
+              <g transform="translate(360 0) scale(-1 1)">
+                <path class="muscle-shape" d="M136 500c-12 6-19 20-18 37 1 18 9 37 22 46 7 4 13-1 12-11l-1-56c0-10-8-19-15-16Z"/>
+                <path class="muscle-detail" d="M130 511c-3 16-2 33 4 48M137 506c1 17 3 34 8 50"/>
+                <path class="muscle-shape" d="M135 507c-6 14-7 34-3 54 2 10 8 14 12 9 2-3 2-10 1-19l-4-45c-2-8-4-7-6 1Z"/>
+              </g>
+            </g>
+
+            <!-- 关节结构线 -->
+            <path class="body-line" d="M127 486c9-3 18-2 26 2M235 488c-9-3-18-2-26 2M120 594c7-4 15-3 22 0M238 594c-7-4-15-3-22 0"/>
+            <path class="body-line-soft" d="M97 275c7 1 13-1 17-6M263 275c-7 1-13-1-17-6M91 380c5 0 9-2 12-7M269 380c-5 0-9-2-12-7"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="stage-foot">
+        <span class="stage-hint">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 2v5.2l2.7 1.5M14.5 8A6.5 6.5 0 1 1 1.5 8a6.5 6.5 0 0 1 13 0Z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          轻点肌群 · 展开动作面板
+        </span>
+        <span class="stage-scale"><i aria-hidden="true"></i><strong>01</strong>&nbsp;/&nbsp;10 MUSCLE GROUPS</span>
+      </div>
+
+      <div class="stage-side-index" aria-hidden="true">
+        <span>ANATOMY INDEX</span>
+        <i></i>
+        <span>10 / 10</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="drawer-layer" id="drawerLayer" aria-hidden="true" inert>
+    <div class="drawer-scrim" data-close-drawer aria-hidden="true"></div>
+
+    <aside class="action-drawer" id="actionDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-describedby="drawerDesc">
+      <div class="drawer-grabber" aria-hidden="true"><span></span></div>
+
+      <header class="drawer-head">
+        <div class="drawer-topline">
+          <span class="drawer-overline">
+            <b id="drawerIndex">01</b>
+            <i aria-hidden="true"></i>
+            <span>Muscle / Action</span>
+          </span>
+          <button type="button" class="icon-button drawer-close" id="drawerClose" aria-label="关闭动作面板">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 4l12 12M16 4 4 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="drawer-title-row">
+          <div>
+            <h2 class="drawer-title" id="drawerTitle">胸大肌</h2>
+            <span class="drawer-title-sub" id="drawerLatin">PECTORALIS MAJOR / 动作预览</span>
+          </div>
+          <span class="drawer-count" id="drawerCount">6 个动作</span>
+        </div>
+
+        <p class="drawer-desc" id="drawerDesc">覆盖水平推、上斜推与夹胸模式。从自重入门到自由重量进阶，选择适合你的训练路径。</p>
+
+        <div class="drawer-meta" aria-label="动作特点">
+          <span class="tag tag-accent">精选动作</span>
+          <span class="tag">新手友好</span>
+          <span class="tag">器械可选</span>
+        </div>
+
+        <div class="equipment-filter" id="equipmentFilter" role="group" aria-label="按器械筛选动作">
+          <button type="button" class="filter-chip is-active" data-filter="all" aria-pressed="true">全部</button>
+          <button type="button" class="filter-chip" data-filter="bodyweight" aria-pressed="false">自重</button>
+          <button type="button" class="filter-chip" data-filter="dumbbell" aria-pressed="false">哑铃</button>
+          <button type="button" class="filter-chip" data-filter="barbell" aria-pressed="false">杠铃</button>
+          <button type="button" class="filter-chip" data-filter="machine" aria-pressed="false">固定器械</button>
+        </div>
+      </header>
+
+      <div class="drawer-scroll">
+        <div class="list-heading">
+          <h3>动作列表</h3>
+          <span id="resultCount">06 / 06</span>
+        </div>
+        <div class="exercise-list" id="exerciseList"></div>
+      </div>
+
+      <footer class="drawer-foot">
+        <p>训练前请充分热身，动作幅度以个人能力为准。</p>
+        <span class="micro-label">Pure utility</span>
+      </footer>
+    </aside>
+  </div>
+
+  <p class="sr-only" id="liveStatus" aria-live="polite"></p>
+
+  <svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="skinGrad" x1="80" y1="40" x2="280" y2="620" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#ede8d8"/>
+        <stop offset="0.55" stop-color="#dcd5c2"/>
+        <stop offset="1" stop-color="#c2baa5"/>
+      </linearGradient>
+      <linearGradient id="muscleGrad" x1="120" y1="130" x2="245" y2="570" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#c4bca8"/>
+        <stop offset="0.58" stop-color="#aaa28d"/>
+        <stop offset="1" stop-color="#918975"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <script>
+    (() => {
+      "use strict";
+
+      /* 肌群 ID -> 训练动作数据集 */
+      const trainingData = {
+        chest: {
+          name: "胸大肌", latin: "PECTORALIS MAJOR", index: "01",
+          desc: "覆盖水平推、上斜推与夹胸模式。从自重入门到自由重量进阶，选择适合你的训练路径。",
+          actions: [
+            { name: "杠铃卧推", target: "胸大肌 · 三角肌前束 · 肱三头肌", equipment: "杠铃", level: "入门", cue: "肩胛后收下沉，脚掌踩稳，杠铃下放至胸线后垂直推起。" },
+            { name: "哑铃上斜卧推", target: "上胸 · 三角肌前束", equipment: "哑铃", level: "入门", cue: "上斜角度约 30°，肘部略低于肩，顶端保持胸肌张力。" },
+            { name: "绳索夹胸", target: "胸大肌 · 胸肌内侧", equipment: "绳索", level: "进阶", cue: "肘部微屈固定，靠胸肌内收手臂，回放时控制拉伸。" },
+            { name: "俯卧撑", target: "胸大肌 · 肱三头肌 · 核心", equipment: "自重", level: "入门", cue: "身体从头到脚保持直线，沉肩收核心，胸口接近地面后推起。" },
+            { name: "双杠臂屈伸", target: "下胸 · 肱三头肌", equipment: "自重", level: "进阶", cue: "身体微前倾，肘部向后打开，下放至肩部舒适深度。" },
+            { name: "哑铃飞鸟", target: "胸大肌 · 三角肌前束", equipment: "哑铃", level: "进阶", cue: "肘部保持轻微弯曲，以胸肌控制画弧，不要过度下放。" }
+          ]
+        },
+        shoulders: {
+          name: "三角肌", latin: "DELTOIDS", index: "02",
+          desc: "围绕前束、中束与后束构建完整的肩部训练。注重控制与活动度，而不是盲目追求重量。",
+          actions: [
+            { name: "哑铃肩上推举", target: "三角肌前束 · 中束", equipment: "哑铃", level: "入门", cue: "核心收紧，手臂在肩胛平面推举，避免腰椎过伸。" },
+            { name: "哑铃侧平举", target: "三角肌中束", equipment: "哑铃", level: "入门", cue: "手肘微屈，用肩膀带动手臂抬起，避免耸肩借力。" },
+            { name: "绳索面拉", target: "三角肌后束 · 上背", equipment: "绳索", level: "进阶", cue: "绳索拉向额头附近，外旋肩部，保持肩胛后收。" },
+            { name: "杠铃直立划船", target: "三角肌中束 · 斜方肌", equipment: "杠铃", level: "进阶", cue: "握距略宽于肩，手肘领先向上，避免拉得过高。" },
+            { name: "阿诺德推举", target: "三角肌前束 · 中束", equipment: "哑铃", level: "进阶", cue: "从掌心朝向自己旋转推起，全程保持控制，不甩重量。" },
+            { name: "俯身反向飞鸟", target: "三角肌后束 · 菱形肌", equipment: "哑铃", level: "进阶", cue: "俯身背部平直，手肘微屈向两侧打开，挤压肩后束。" }
+          ]
+        },
+        biceps: {
+          name: "肱二头肌", latin: "BICEPS", index: "03",
+          desc: "通过不同肘屈角度刺激肱二头肌与肱肌。保持肩胛稳定，让目标肌群真正承担负荷。",
+          actions: [
+            { name: "哑铃交替弯举", target: "肱二头肌 · 肱肌", equipment: "哑铃", level: "入门", cue: "上臂贴住体侧，弯举时避免身体摆动，顶峰稍停。" },
+            { name: "杠铃弯举", target: "肱二头肌", equipment: "杠铃", level: "入门", cue: "手腕保持中立，用肱二头肌带动肘屈，下放控制。" },
+            { name: "锤式弯举", target: "肱肌 · 肱桡肌", equipment: "哑铃", level: "进阶", cue: "中立握法固定肘部，向上弯举，保持手腕稳定。" },
+            { name: "牧师凳弯举", target: "肱二头肌短头", equipment: "器械", level: "进阶", cue: "上臂完整贴合垫面，屈肘举起后缓慢下放，避免肘部锁死。" },
+            { name: "绳索弯举", target: "肱二头肌 · 肱肌", equipment: "绳索", level: "进阶", cue: "身体站直，上臂固定，收缩顶峰时挤压肱二头肌。" },
+            { name: "反握引体向上", target: "肱二头肌 · 背阔肌", equipment: "自重", level: "高阶", cue: "反握略窄于肩，先沉肩再拉动身体，避免摆荡。" }
+          ]
+        },
+        abs: {
+          name: "腹部核心", latin: "CORE", index: "06",
+          desc: "核心的价值不止卷腹。抗伸展、抗旋转与髋屈能力，共同构成稳定的训练底盘。",
+          actions: [
+            { name: "平板支撑", target: "腹横肌 · 腹直肌", equipment: "自重", level: "入门", cue: "收肋骨与骨盆，让头、背、髋、踝保持一条直线。" },
+            { name: "死虫式", target: "深层核心 · 髋屈肌", equipment: "自重", level: "入门", cue: "腰背轻轻贴地，四肢交替伸展，保持核心张力。" },
+            { name: "悬垂举腿", target: "腹直肌下部 · 髂腰肌", equipment: "自重", level: "进阶", cue: "先稳定肩胛，收骨盆带起双腿，避免借摆动发力。" },
+            { name: "卷腹", target: "腹直肌上部", equipment: "自重", level: "入门", cue: "下巴微收，用腹部将胸骨卷向骨盆，腰部不要离地。" },
+            { name: "绳索跪姿卷腹", target: "腹直肌 · 腹横肌", equipment: "绳索", level: "进阶", cue: "臀部固定，腹部收缩带动躯干向下卷曲，避免用手臂拉绳。" },
+            { name: "健腹轮", target: "腹直肌 · 深层核心", equipment: "器械", level: "高阶", cue: "收紧臀部和核心，控制向前滚动，避免腰部下塌。" }
+          ]
+        },
+        quads: {
+          name: "股四头肌", latin: "QUADRICEPS", index: "08",
+          desc: "以膝主导的蹲、伸动作塑造腿部力量。保持足底稳定，让膝盖自然跟随脚尖方向。",
+          actions: [
+            { name: "高脚杯深蹲", target: "股四头肌 · 臀大肌", equipment: "哑铃", level: "入门", cue: "膝尖与脚尖同向，髋部下沉，保持胸背挺直，脚掌踩稳。" },
+            { name: "腿举", target: "股四头肌 · 腘绳肌", equipment: "器械", level: "入门", cue: "臀部贴紧靠垫，膝盖跟随脚尖方向，避免完全锁死膝关节。" },
+            { name: "保加利亚分腿蹲", target: "股四头肌 · 臀大肌", equipment: "哑铃", level: "进阶", cue: "前脚踩稳，身体垂直下沉，膝盖保持在脚掌上方。" },
+            { name: "杠铃深蹲", target: "股四头肌 · 臀大肌", equipment: "杠铃", level: "进阶", cue: "吸气收紧核心，髋膝同步下蹲，脚掌均匀受力后站起。" },
+            { name: "箭步蹲", target: "股四头肌 · 臀大肌", equipment: "哑铃", level: "入门", cue: "向前迈步后垂直下沉，前膝对准脚尖，后膝接近地面。" },
+            { name: "腿部伸展", target: "股四头肌", equipment: "器械", level: "进阶", cue: "调整靠垫贴合小腿，伸膝到接近伸直，顶端短暂停顿。" }
+          ]
+        },
+        lats: {
+          name: "背阔肌", latin: "LATISSIMUS DORSI", index: "05",
+          desc: "从垂直拉与水平拉两个方向刺激背阔肌，建立背部宽度。先学会肩胛控制，再增加负荷。",
+          actions: [
+            { name: "高位下拉", target: "背阔肌 · 大圆肌", equipment: "器械", level: "入门", cue: "先下沉肩胛，再屈肘将横杆拉向锁骨，避免身体后仰借力。" },
+            { name: "坐姿绳索划船", target: "背阔肌 · 菱形肌", equipment: "绳索", level: "入门", cue: "胸口挺起，手肘贴近体侧向后拉，肩胛向后下方收。" },
+            { name: "单臂哑铃划船", target: "背阔肌 · 斜方肌中束", equipment: "哑铃", level: "进阶", cue: "背部保持平直，将手肘拉向髋部，避免旋转躯干。" },
+            { name: "引体向上", target: "背阔肌 · 大圆肌", equipment: "自重", level: "进阶", cue: "从主动悬垂开始，用背阔肌拉起身体，顶端保持控制。" },
+            { name: "杠铃俯身划船", target: "中背 · 背阔肌", equipment: "杠铃", level: "进阶", cue: "髋部折叠保持背部中立，拉向下腹，避免耸肩。" },
+            { name: "直臂下压", target: "背阔肌 · 大圆肌", equipment: "绳索", level: "进阶", cue: "手臂近伸直，以肩为轴向下压，感受背阔肌收紧。" }
+          ]
+        },
+        triceps: {
+          name: "肱三头肌", latin: "TRICEPS", index: "04",
+          desc: "肘伸是肱三头肌的核心功能。区分下压、过顶伸展与臂屈伸，完整刺激三个头。",
+          actions: [
+            { name: "绳索下压", target: "肱三头肌外侧头", equipment: "绳索", level: "入门", cue: "上臂夹紧体侧，伸肘压下绳索，底端充分收缩肱三头肌。" },
+            { name: "哑铃颈后臂屈伸", target: "肱三头肌长头", equipment: "哑铃", level: "入门", cue: "手肘朝前固定，向颈后下放哑铃，再由肱三头肌伸直。" },
+            { name: "双杠臂屈伸", target: "肱三头肌 · 下胸", equipment: "自重", level: "进阶", cue: "躯干保持直立，肘部向后弯曲，避免肩部耸起。" },
+            { name: "窄距俯卧撑", target: "肱三头肌 · 胸大肌", equipment: "自重", level: "入门", cue: "双手略窄于肩，手肘贴近身体，核心保持稳定。" },
+            { name: "仰卧臂屈伸", target: "肱三头肌长头", equipment: "杠铃", level: "进阶", cue: "上臂保持垂直，屈肘将杠铃下放至额头上方，再伸肘。" },
+            { name: "单臂绳索下压", target: "肱三头肌外侧头", equipment: "绳索", level: "进阶", cue: "固定上臂，单侧伸肘下压，避免肩膀前移。" }
+          ]
+        },
+        glutes: {
+          name: "臀部", latin: "GLUTES", index: "07",
+          desc: "臀大肌负责髋伸与髋外旋。优先建立髋伸感觉，再通过负荷与单腿动作持续进阶。",
+          actions: [
+            { name: "臀桥", target: "臀大肌 · 腘绳肌", equipment: "自重", level: "入门", cue: "脚跟发力抬髋，顶端收紧臀部，避免用腰部顶起。" },
+            { name: "杠铃臀推", target: "臀大肌", equipment: "杠铃", level: "进阶", cue: "肩胛抵住训练凳，髋部向上推至躯干与大腿成直线。" },
+            { name: "绳索后踢腿", target: "臀大肌 · 臀中肌", equipment: "绳索", level: "入门", cue: "核心稳定，腿向后上方伸展，顶峰挤压臀大肌。" },
+            { name: "保加利亚分腿蹲", target: "臀大肌 · 股四头肌", equipment: "哑铃", level: "进阶", cue: "重心放在前脚，下沉时保持髋部朝前，前脚发力站起。" },
+            { name: "罗马尼亚硬拉", target: "臀大肌 · 腘绳肌", equipment: "杠铃", level: "进阶", cue: "髋部向后推，膝盖微屈，杠铃贴腿下放，感受腘绳肌拉伸。" },
+            { name: "坐姿髋外展", target: "臀中肌 · 臀小肌", equipment: "固定器械", level: "入门", cue: "坐直贴紧靠背，双膝向外打开，顶峰停顿后缓慢回收。" }
+          ]
+        },
+        hamstrings: {
+          name: "腘绳肌", latin: "HAMSTRINGS", index: "09",
+          desc: "兼有膝屈与髋伸功能。将硬拉模式与腿弯举结合，才能更完整地训练后侧链。",
+          actions: [
+            { name: "罗马尼亚硬拉", target: "腘绳肌 · 臀大肌", equipment: "杠铃", level: "入门", cue: "保持脊柱中立，髋部后移，杠铃贴腿下落，再用臀腿伸髋。" },
+            { name: "坐姿腿弯举", target: "腘绳肌 · 腓肠肌", equipment: "器械", level: "入门", cue: "调整靠垫稳定大腿，脚跟发力弯曲小腿，下放时控制。" },
+            { name: "单腿罗马尼亚硬拉", target: "腘绳肌 · 臀大肌", equipment: "哑铃", level: "进阶", cue: "支撑腿微屈，髋部折叠，保持骨盆水平，不要弓背。" },
+            { name: "俯卧腿弯举", target: "腘绳肌", equipment: "器械", level: "入门", cue: "髋部贴紧垫面，用腘绳肌屈膝，避免腰部抬起。" },
+            { name: "北欧腿弯举", target: "腘绳肌 · 小腿后侧", equipment: "自重", level: "高阶", cue: "身体从头到膝成直线，缓慢前倾，靠腿后侧控制离心。" },
+            { name: "早安式体前屈", target: "腘绳肌 · 竖脊肌", equipment: "杠铃", level: "进阶", cue: "杠铃置于上背，髋部向后折叠，保持背部平直后起身。" }
+          ]
+        },
+        gastrocnemius: {
+          name: "腓肠肌", latin: "GASTROCNEMIUS", index: "10",
+          desc: "以站姿提踵为主刺激腓肠肌，配合坐姿动作覆盖比目鱼肌。加入停顿与节奏变化，突破平台期。",
+          actions: [
+            { name: "站姿提踵", target: "腓肠肌 · 比目鱼肌", equipment: "自重", level: "入门", cue: "前脚掌踩实，脚跟充分抬高并停顿，缓慢下放拉伸小腿。" },
+            { name: "坐姿提踵", target: "比目鱼肌", equipment: "器械", level: "入门", cue: "膝盖固定，提踵至最高点收缩，再缓慢回落。" },
+            { name: "单腿哑铃提踵", target: "腓肠肌 · 比目鱼肌", equipment: "哑铃", level: "进阶", cue: "单脚前掌发力，保持身体平衡，顶峰缩短停留。" },
+            { name: "器械站姿提踵", target: "腓肠肌 · 比目鱼肌", equipment: "器械", level: "入门", cue: "膝盖保持微屈，脚踝完整行程，避免弹震借力。" },
+            { name: "哈克机提踵", target: "腓肠肌 · 比目鱼肌", equipment: "固定器械", level: "进阶", cue: "前脚掌踩稳踏板，脚跟抬高至顶峰，控制下放拉伸小腿。" },
+            { name: "跳箱", target: "腓肠肌 · 股四头肌", equipment: "自重", level: "进阶", cue: "屈髋屈膝准备，摆臂跳上箱面，轻缓落地后站稳再下箱。" }
+          ]
+        }
+      };
+
+
+      const stage = document.getElementById("stage");
+      const stageCode = document.getElementById("stageCode");
+      const focusCard = document.getElementById("focusCard");
+      const focusName = document.getElementById("focusName");
+      const focusMeta = document.getElementById("focusMeta");
+      const drawerLayer = document.getElementById("drawerLayer");
+      const drawer = document.getElementById("actionDrawer");
+      const drawerClose = document.getElementById("drawerClose");
+      const drawerIndex = document.getElementById("drawerIndex");
+      const drawerTitle = document.getElementById("drawerTitle");
+      const drawerLatin = document.getElementById("drawerLatin");
+      const drawerDesc = document.getElementById("drawerDesc");
+      const drawerCount = document.getElementById("drawerCount");
+      const exerciseList = document.getElementById("exerciseList");
+      const equipmentFilter = document.getElementById("equipmentFilter");
+      const resultCount = document.getElementById("resultCount");
+      const drawerScroll = drawer.querySelector(".drawer-scroll");
+      const liveStatus = document.getElementById("liveStatus");
+      const exploreBtn = document.getElementById("exploreBtn");
+
+      let view = "front";
+      let selectedKey = null;
+      let lastTrigger = null;
+      let currentDrawerKey = null;
+      let currentFilter = "all";
+      let drawerDrag = null;
+      let viewTransitionTimer = null;
+
+      const mobileQuery = window.matchMedia("(max-width: 768px)");
+
+      const MUSCLE_SELECT_EVENT = "muscle:select";
+
+      const equipmentFilters = {
+        all: () => true,
+        bodyweight: (action) => action.equipment === "自重",
+        dumbbell: (action) => action.equipment === "哑铃",
+        barbell: (action) => action.equipment === "杠铃",
+        machine: (action) => ["固定器械", "器械", "绳索"].includes(action.equipment)
+      };
+
+      const filterLabels = {
+        all: "全部",
+        bodyweight: "自重",
+        dumbbell: "哑铃",
+        barbell: "杠铃",
+        machine: "固定器械"
+      };
+
+      const defaultFocus = {
+        name: "人体肌肉图谱",
+        meta: "HOVER / TAP TO EXPLORE"
+      };
+
+      function syncSegmented(group, value) {
+        group.querySelectorAll("button").forEach((button) => {
+          const active = button.dataset.value === value;
+          button.classList.toggle("is-active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+      }
+
+      function updateStageCode() {
+        stageCode.textContent = `Male · ${view === "front" ? "Anterior" : "Posterior"}`;
+      }
+
+      function resetFocus() {
+        selectedKey = null;
+        focusCard.classList.remove("has-focus", "is-selected");
+        focusName.textContent = defaultFocus.name;
+        focusMeta.textContent = view === "front" ? "ANTERIOR VIEW / 正面" : "POSTERIOR VIEW / 背面";
+        document.querySelectorAll(".muscle-zone.is-selected").forEach((zone) => {
+          zone.classList.remove("is-selected");
+          zone.setAttribute("aria-pressed", "false");
+        });
+      }
+
+      function restoreSelectedFocus() {
+        if (!selectedKey) {
+          focusCard.classList.remove("has-focus", "is-selected");
+          focusName.textContent = defaultFocus.name;
+          focusMeta.textContent = view === "front" ? "ANTERIOR VIEW / 正面" : "POSTERIOR VIEW / 背面";
+          return;
+        }
+
+        const data = trainingData[selectedKey];
+        if (!data) return;
+
+        focusCard.classList.add("has-focus", "is-selected");
+        focusName.textContent = data.name;
+        focusMeta.textContent = `SELECTED / ${String(data.actions.length).padStart(2, "0")} MOVES`;
+      }
+
+      function setFocus(key, zone) {
+        const data = trainingData[key];
+        if (!data) return;
+
+        const isSelected = selectedKey === key;
+        focusCard.classList.add("has-focus");
+        focusCard.classList.toggle("is-selected", isSelected);
+        focusName.textContent = data.name;
+        focusMeta.textContent = isSelected
+          ? `SELECTED / ${String(data.actions.length).padStart(2, "0")} MOVES`
+          : `${String(data.actions.length).padStart(2, "0")} 个动作 / 点击查看`;
+
+        document.querySelectorAll(".muscle-zone.is-hovered").forEach((item) => item.classList.remove("is-hovered"));
+        if (zone) zone.classList.add("is-hovered");
+      }
+
+      function clearHover() {
+        document.querySelectorAll(".muscle-zone.is-hovered").forEach((item) => item.classList.remove("is-hovered"));
+        restoreSelectedFocus();
+      }
+
+      function demoPlaceholder() {
+        return `
+          <span class="demo-placeholder" aria-hidden="true">
+            <span class="demo-play">
+              <svg viewBox="0 0 12 12" fill="none">
+                <path d="M4 2.5 9.5 6 4 9.5V2.5Z" fill="currentColor"/>
+              </svg>
+            </span>
+            <span class="demo-placeholder-label">演示位</span>
+            <span class="demo-slot">DEMO SLOT</span>
+          </span>`;
+      }
+
+      function syncFilterAvailability(data) {
+        equipmentFilter.querySelectorAll(".filter-chip").forEach((button) => {
+          const filter = button.dataset.filter;
+          const matcher = equipmentFilters[filter] || equipmentFilters.all;
+          const count = data.actions.filter(matcher).length;
+          button.dataset.count = String(count).padStart(2, "0");
+          button.disabled = filter !== "all" && count === 0;
+          button.setAttribute("aria-label", `${filterLabels[filter] || "全部"}，${count} 个动作`);
+        });
+      }
+
+      function setActiveFilter(filter) {
+        currentFilter = filter;
+        equipmentFilter.querySelectorAll(".filter-chip").forEach((button) => {
+          const active = button.dataset.filter === filter && !button.disabled;
+          button.classList.toggle("is-active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+      }
+
+      function getFilteredActions(data) {
+        const matcher = equipmentFilters[currentFilter] || equipmentFilters.all;
+        return data.actions.filter(matcher);
+      }
+
+      function renderActions(data) {
+        const actions = getFilteredActions(data);
+        resultCount.textContent = `${String(actions.length).padStart(2, "0")} / ${String(data.actions.length).padStart(2, "0")}`;
+        drawerScroll.scrollTop = 0;
+
+        if (!actions.length) {
+          exerciseList.innerHTML = `
+            <div class="filter-empty" role="status">
+              <div>
+                <span>NO MATCHED MOVES</span>
+                <strong>暂无匹配动作</strong>
+                <p>这个肌群暂时没有该器械分类，试试其他筛选。</p>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        exerciseList.innerHTML = actions.map((action, index) => {
+          const detailId = `exercise-detail-${currentDrawerKey}-${index}`;
+          return `
+            <article class="exercise-card" data-exercise="${action.name}">
+              <button class="exercise-toggle" type="button" aria-expanded="false" aria-controls="${detailId}">
+                <span class="exercise-visual" aria-hidden="true">
+                  ${demoPlaceholder()}
+                </span>
+                <span class="exercise-copy">
+                  <span class="exercise-tags">
+                    <span class="tag tag-accent">${action.equipment}</span>
+                    <span class="tag">${action.level}</span>
+                  </span>
+                  <span class="exercise-name">${action.name}</span>
+                  <span class="exercise-target">${action.target}</span>
+                </span>
+                <span class="exercise-expand-icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="exercise-details" id="${detailId}">
+                <div class="exercise-details-inner">
+                  <div class="exercise-details-body">
+                    <span class="detail-kicker">动作要点 / Form notes</span>
+                    <p class="detail-copy">${action.cue}</p>
+                    <div class="detail-meta">
+                      <span><b>目标</b>${action.target}</span>
+                      <span><b>器械</b>${action.equipment}</span>
+                      <span><b>难度</b>${action.level}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function updateDrawer(key) {
+        const data = trainingData[key];
+        if (!data) return;
+        currentDrawerKey = key;
+        syncFilterAvailability(data);
+        setActiveFilter("all");
+        drawerIndex.textContent = data.index;
+        drawerTitle.textContent = data.name;
+        drawerLatin.textContent = `${data.latin} / 动作预览`;
+        drawerDesc.textContent = data.desc;
+        drawerCount.textContent = `${data.actions.length} 个动作`;
+        renderActions(data);
+      }
+
+      function openDrawer(key, trigger) {
+        if (!trainingData[key]) return;
+        lastTrigger = trigger || lastTrigger;
+        drawer.classList.remove("is-dragging");
+        drawer.style.removeProperty("transform");
+        drawer.style.removeProperty("transition");
+        updateDrawer(key);
+        drawerScroll.scrollTop = 0;
+        drawerLayer.classList.add("is-open");
+        drawerLayer.removeAttribute("inert");
+        drawerLayer.setAttribute("aria-hidden", "false");
+        document.body.classList.add("drawer-open");
+        liveStatus.textContent = `已打开${trainingData[key].name}动作面板`;
+        window.setTimeout(() => drawerClose.focus({ preventScroll: true }), 80);
+      }
+
+      function selectMuscle(key, zone) {
+        const data = trainingData[key];
+        if (!data) return;
+
+        selectedKey = key;
+        lastTrigger = zone || null;
+
+        document.querySelectorAll(".muscle-zone.is-selected").forEach((item) => {
+          item.classList.remove("is-selected");
+          item.setAttribute("aria-pressed", "false");
+        });
+
+        document.querySelectorAll(`.muscle-zone[data-muscle="${key}"]`).forEach((item) => {
+          item.classList.add("is-selected");
+          item.setAttribute("aria-pressed", "true");
+        });
+
+        setFocus(key, zone);
+
+        /*
+         * 预留联动接口：
+         * 点击肌群时向 document 派发可取消的 muscle:select 事件。
+         * 后续抽屉、训练计划或动作推荐模块可直接监听：
+         *
+         * document.addEventListener("muscle:select", (event) => {
+         *   const { id, name, latin, view, exerciseCount, exercises, sourceElement } = event.detail;
+         * });
+         */
+        const detail = {
+          id: key,
+          name: data.name,
+          latin: data.latin,
+          view,
+          exerciseCount: data.actions.length,
+          exercises: data.actions.map((action) => ({ ...action })),
+          sourceElement: zone || null
+        };
+
+        const selectionEvent = new CustomEvent(MUSCLE_SELECT_EVENT, {
+          detail,
+          bubbles: true,
+          cancelable: true
+        });
+
+        (zone || document).dispatchEvent(selectionEvent);
+        liveStatus.textContent = `已选择${data.name}，共 ${data.actions.length} 个动作`;
+
+        /* 默认联动当前动作面板；外部模块可通过 preventDefault 接管后续流程。 */
+        if (!selectionEvent.defaultPrevented) {
+          openDrawer(key, zone);
+        }
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove("is-dragging");
+        drawerLayer.classList.remove("is-open");
+        drawerLayer.setAttribute("aria-hidden", "true");
+        drawerLayer.setAttribute("inert", "");
+        document.body.classList.remove("drawer-open");
+        liveStatus.textContent = "已关闭动作面板";
+        restoreSelectedFocus();
+        window.setTimeout(() => {
+          if (!drawerLayer.classList.contains("is-open")) {
+            drawer.style.removeProperty("transform");
+          }
+        }, 580);
+        if (lastTrigger) {
+          window.setTimeout(() => lastTrigger.focus({ preventScroll: true }), 80);
+        }
+      }
+
+      function updateView(nextView) {
+        if (nextView === view) return;
+
+        view = nextView;
+        stage.dataset.view = view;
+        stage.classList.remove("is-switching");
+        void stage.offsetWidth;
+        stage.classList.add("is-switching");
+        window.clearTimeout(viewTransitionTimer);
+        viewTransitionTimer = window.setTimeout(() => {
+          stage.classList.remove("is-switching");
+        }, 680);
+
+        syncSegmented(document.querySelector(".js-view"), view);
+        document.querySelectorAll(".body-svg").forEach((svg) => {
+          const active = svg.dataset.body === view;
+          svg.classList.toggle("is-active", active);
+          if (active) svg.removeAttribute("aria-hidden");
+          else svg.setAttribute("aria-hidden", "true");
+        });
+        resetFocus();
+        updateStageCode();
+        liveStatus.textContent = `已切换至${view === "front" ? "正面" : "背面"}视图，共 6 个可点击肌群`;
+      }
+
+      document.querySelectorAll(".js-view button").forEach((button) => {
+        button.addEventListener("click", () => updateView(button.dataset.value));
+      });
+
+      document.querySelectorAll(".muscle-zone").forEach((zone) => {
+        const key = zone.dataset.muscle;
+        zone.setAttribute("aria-pressed", "false");
+
+        zone.addEventListener("pointerenter", () => setFocus(key, zone));
+        zone.addEventListener("pointerleave", clearHover);
+        zone.addEventListener("focus", () => setFocus(key, zone));
+        zone.addEventListener("blur", clearHover);
+        zone.addEventListener("click", () => selectMuscle(key, zone));
+        zone.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectMuscle(key, zone);
+          }
+        });
+      });
+
+      drawerClose.addEventListener("click", closeDrawer);
+      document.querySelectorAll("[data-close-drawer]").forEach((element) => {
+        element.addEventListener("click", closeDrawer);
+      });
+
+      equipmentFilter.addEventListener("click", (event) => {
+        const chip = event.target.closest(".filter-chip");
+        if (!chip || chip.disabled) return;
+        const data = trainingData[currentDrawerKey];
+        if (!data) return;
+        setActiveFilter(chip.dataset.filter);
+        renderActions(data);
+        const matchCount = getFilteredActions(data).length;
+        liveStatus.textContent = `已筛选${filterLabels[currentFilter]}动作，显示 ${matchCount} 个结果`;
+      });
+
+      exerciseList.addEventListener("click", (event) => {
+        const toggle = event.target.closest(".exercise-toggle");
+        if (!toggle) return;
+        const card = toggle.closest(".exercise-card");
+        if (!card) return;
+
+        const actionName = toggle.querySelector(".exercise-name")?.textContent.trim() || "该动作";
+        const willExpand = !card.classList.contains("is-expanded");
+
+        exerciseList.querySelectorAll(".exercise-card.is-expanded").forEach((openCard) => {
+          openCard.classList.remove("is-expanded");
+          const openToggle = openCard.querySelector(".exercise-toggle");
+          if (openToggle) openToggle.setAttribute("aria-expanded", "false");
+        });
+
+        if (willExpand) {
+          card.classList.add("is-expanded");
+          toggle.setAttribute("aria-expanded", "true");
+          liveStatus.textContent = `已展开${actionName}的动作要点`;
+        } else {
+          liveStatus.textContent = `已收起${actionName}的动作要点`;
+        }
+      });
+
+      function startDrawerDrag(event) {
+        if (!mobileQuery.matches) return;
+        if (!drawerLayer.classList.contains("is-open")) return;
+        if (!event.target.closest(".drawer-head, .drawer-grabber")) return;
+        if (event.target.closest("button, a, input, select, textarea, .equipment-filter")) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+
+        drawerDrag = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          startedAt: performance.now(),
+          moved: false
+        };
+
+        drawer.classList.add("is-dragging");
+        try {
+          drawer.setPointerCapture(event.pointerId);
+        } catch (error) {
+          /* Pointer capture can be unavailable on synthetic events. */
+        }
+      }
+
+      function moveDrawerDrag(event) {
+        if (!drawerDrag || event.pointerId !== drawerDrag.pointerId) return;
+
+        const dx = event.clientX - drawerDrag.startX;
+        const dy = event.clientY - drawerDrag.startY;
+
+        if (dy <= 0) return;
+        if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) return;
+
+        event.preventDefault();
+        drawerDrag.moved = true;
+        const offset = Math.min(dy, window.innerHeight);
+        drawer.style.transform = `translateY(${offset}px)`;
+      }
+
+      function finishDrawerDrag(event) {
+        if (!drawerDrag || event.pointerId !== drawerDrag.pointerId) return;
+
+        const dy = Math.max(0, event.clientY - drawerDrag.startY);
+        const elapsed = Math.max(1, performance.now() - drawerDrag.startedAt);
+        const velocity = dy / elapsed;
+        const wasDragging = drawerDrag.moved;
+        const shouldClose = dy > 120 || (dy > 42 && velocity > 0.55);
+
+        drawerDrag = null;
+        drawer.classList.remove("is-dragging");
+
+        if (!wasDragging) {
+          drawer.style.removeProperty("transform");
+          return;
+        }
+
+        if (shouldClose) {
+          closeDrawer();
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          drawer.style.removeProperty("transform");
+        });
+      }
+
+      function cancelDrawerDrag(event) {
+        if (!drawerDrag || event.pointerId !== drawerDrag.pointerId) return;
+        drawerDrag = null;
+        drawer.classList.remove("is-dragging");
+        requestAnimationFrame(() => {
+          drawer.style.removeProperty("transform");
+        });
+      }
+
+      drawer.addEventListener("pointerdown", startDrawerDrag);
+      drawer.addEventListener("pointermove", moveDrawerDrag, { passive: false });
+      drawer.addEventListener("pointerup", finishDrawerDrag);
+      drawer.addEventListener("pointercancel", cancelDrawerDrag);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && drawerLayer.classList.contains("is-open")) {
+          closeDrawer();
+        }
+      });
+
+      drawer.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab") return;
+        const focusable = drawer.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
+      exploreBtn.addEventListener("click", () => {
+        const target = document.querySelector(".body-stage");
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        const firstMuscle = stage.querySelector(".body-svg.is-active .muscle-zone");
+        window.setTimeout(() => {
+          if (firstMuscle) firstMuscle.focus({ preventScroll: true });
+        }, 450);
+      });
+
+      resetFocus();
+      updateStageCode();
+    })();
+  </script>
+</body>
+</html>

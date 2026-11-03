@@ -1,0 +1,246 @@
+    /* ---------- 11. Install entry + install guide ---------- */
+    .install-app.install-app--hero {
+      display: none;
+    }
+
+    .install-dialog {
+      width: min(420px, calc(100vw - 32px));
+      max-height: min(84dvh, 720px);
+      margin: auto;
+      padding: 0;
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 24px;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 30px 100px rgba(13, 15, 11, 0.3);
+    }
+
+    .install-dialog::backdrop {
+      background: rgba(14, 16, 12, 0.46);
+      -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
+    }
+
+    .install-dialog[open] {
+      animation: install-dialog-in 0.32s var(--ease-out);
+    }
+
+    @keyframes install-dialog-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .install-dialog-inner {
+      position: relative;
+      padding: 28px;
+    }
+
+    .install-dialog-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 34px;
+      height: 34px;
+      background: var(--surface-raised);
+    }
+
+    .install-dialog-icon {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      margin-bottom: 17px;
+      border-radius: 14px;
+      background: var(--ink);
+      color: var(--accent);
+    }
+
+    .install-dialog-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .install-dialog-kicker {
+      margin: 0 0 8px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+    }
+
+    .install-dialog h2 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.055em;
+    }
+
+    .install-dialog-lead {
+      margin: 10px 0 0;
+      color: var(--muted-strong);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .install-platform {
+      display: inline-flex;
+      margin-top: 15px;
+      padding: 4px 7px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .install-steps {
+      display: grid;
+      gap: 11px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: install-step;
+    }
+
+    .install-steps li {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      counter-increment: install-step;
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .install-steps li::before {
+      content: counter(install-step, decimal-leading-zero);
+      display: grid;
+      place-items: center;
+      height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--accent-deep);
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .install-dialog-note {
+      margin: 18px 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f7f8fa;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .install-dialog-done {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: var(--radius-pill);
+      background: var(--ink);
+      color: var(--surface);
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .install-dialog-done:hover {
+      background: var(--accent-deep);
+    }
+
+    @media (max-width: 768px) {
+      .install-app.install-app--hero {
+        display: inline-flex;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 15px;
+        border: 1px solid var(--line-strong);
+        background: var(--surface-raised);
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .install-app.install-app--hero:hover {
+        border-color: var(--ink);
+        background: #f7f8fa;
+        color: var(--ink);
+      }
+
+      .install-app.install-app--hero:active {
+        transform: scale(0.98);
+      }
+
+      .install-app.install-app--hero svg {
+        width: 14px;
+        height: 14px;
+        color: var(--accent);
+      }
+
+      .an-foot .install-app {
+        display: none;
+      }
+
+      .install-dialog {
+        position: fixed;
+        inset: auto 0 0;
+        width: 100%;
+        max-width: none;
+        max-height: 88dvh;
+        margin: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        border-radius: 24px 24px 0 0;
+      }
+
+      .install-dialog[open] {
+        animation: install-sheet-in 0.38s var(--ease-out);
+      }
+
+      @keyframes install-sheet-in {
+        from {
+          opacity: 0.75;
+          transform: translateY(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .install-dialog-inner {
+        padding: 24px 20px calc(18px + env(safe-area-inset-bottom));
+      }
+
+      .install-dialog h2 {
+        font-size: 25px;
+      }
+
+      .install-dialog-close {
+        top: 14px;
+        right: 14px;
+      }
+    }
+

@@ -1,0 +1,60 @@
+  <script>
+    (() => {
+      const installApp = document.getElementById("installApp");
+      const live = document.getElementById("liveStatus");
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+      let deferredPrompt = null;
+
+      function syncInstallButton() {
+        if (!installApp) return;
+        installApp.hidden = standalone || !deferredPrompt;
+      }
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        syncInstallButton();
+      });
+
+      installApp?.addEventListener("click", async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        try {
+          await deferredPrompt.userChoice;
+        } catch (error) {
+          /* The prompt can be dismissed or become unavailable. */
+        }
+        deferredPrompt = null;
+        syncInstallButton();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredPrompt = null;
+        syncInstallButton();
+        if (live) live.textContent = "应用已安装";
+      });
+
+      syncInstallButton();
+
+      if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+        window.addEventListener("load", async () => {
+          try {
+            await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+            navigator.serviceWorker.ready.then(() => {
+              document.documentElement.dataset.offlineReady = "true";
+            });
+          } catch (error) {
+            console.info("[PWA] Service Worker registration skipped:", error.message);
+          }
+        });
+      }
+
+      ["gesturestart", "gesturechange"].forEach((type) => {
+        document.addEventListener(type, (event) => event.preventDefault(), { passive: false });
+      });
+
+      document.addEventListener("touchmove", (event) => {
+        if (event.touches && event.touches.length > 1) event.preventDefault();
+      }, { passive: false });
+    })();
+  </script>

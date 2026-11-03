@@ -1,0 +1,3 @@
+﻿import fs from "node:fs"; import vm from "node:vm";
+function load(file){let src=fs.readFileSync(file,"utf8"); const outline=src.match(/const OUTLINE: OutlinePath\[\] = (\[[\s\S]*?\n\]);/)[1]; const muscles=src.match(/const MUSCLES: MusclePath\[\] = (\[[\s\S]*?\n\]);/)[1]; const c={};vm.createContext(c);vm.runInContext("o="+outline+";m="+muscles+";",c);return c;}
+for(const [n,f] of [["front","tools/male-front.ts"],["back","tools/male-back.ts"]]){const c=load(f); console.log(n,"outline chars",c.o.reduce((a,x)=>a+x.d.length,0),"muscle chars",c.m.reduce((a,x)=>a+x.d.length,0)); for (const m of c.m) console.log(n,m.group,m.id,m.d.length);}
